@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
-import jwt from 'jsonwebtoken';
+import { generateJWTToken } from '@/lib/token-utils';
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json();
+    const { username, password } = await request.json();
 
-    if (!email || !password) {
+    if (!username || !password) {
       return NextResponse.json(
-        { error: 'Email y contraseña son requeridos' },
+        { error: 'Nombre de usuario y contraseña son requeridos' },
         { status: 400 }
       );
     }
@@ -17,8 +17,8 @@ export async function POST(request: NextRequest) {
     // Conectar a la base de datos
     await dbConnect();
 
-    // Buscar el usuario por email
-    const user = await User.findOne({ email: email.toLowerCase() });
+    // Buscar el usuario por nombre de usuario
+    const user = await User.findOne({ name: username });
 
     if (!user) {
       return NextResponse.json(
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Generar token JWT
-    const token = jwt.sign(
+    const token = generateJWTToken(
       {
         userId: user._id,
         email: user.email,
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
         name: user.name,
       },
       process.env.NEXTAUTH_SECRET || 'fallback-secret',
-      { expiresIn: '24h' }
+      '24h'
     );
 
     // Crear respuesta con cookie

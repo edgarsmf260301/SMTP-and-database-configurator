@@ -9,7 +9,7 @@ export async function GET() {
     const envExists = fs.existsSync(envPath);
 
     if (!envExists) {
-      return NextResponse.json({ needsSetup: true });
+      return NextResponse.json({ isConfigured: false, needsSetup: true });
     }
 
     // Leer el archivo .env.local
@@ -28,45 +28,30 @@ export async function GET() {
     });
 
     if (missingVars.length > 0) {
-      return NextResponse.json({ needsSetup: true });
+      return NextResponse.json({ isConfigured: false, needsSetup: true });
     }
 
     // Verificar conexión a MongoDB
     try {
-      const mongoose = await import('mongoose');
-      const MONGODB_URI = process.env.MONGODB_URI;
-      
-      if (!MONGODB_URI) {
-        return NextResponse.json({ needsSetup: true });
-      }
+      const dbConnect = (await import('@/lib/mongodb')).default;
+      await dbConnect();
 
-      // Intentar conectar a MongoDB
-      await mongoose.connect(MONGODB_URI, {
-        bufferCommands: false,
-        maxPoolSize: 1,
-      });
-
-      // Verificar si existe al menos un usuario admin
-      const User = mongoose.default.models.User || mongoose.default.model('User', new mongoose.default.Schema({
-        email: String,
-        role: String,
-      }));
+      // Importar el modelo User directamente
+      const User = (await import('@/models/User')).default;
 
       const adminCount = await User.countDocuments({ role: 'admin' });
-      
-      await mongoose.default.disconnect();
 
       if (adminCount === 0) {
-        return NextResponse.json({ needsSetup: true });
+        return NextResponse.json({ isConfigured: false, needsSetup: true });
       }
 
-      return NextResponse.json({ needsSetup: false });
+      return NextResponse.json({ isConfigured: true, needsSetup: false });
     } catch (error: unknown) {
       console.error('Error checking MongoDB connection:', error);
-      return NextResponse.json({ needsSetup: true });
+      return NextResponse.json({ isConfigured: false, needsSetup: true });
     }
   } catch (error: unknown) {
     console.error('Error checking setup status:', error);
-    return NextResponse.json({ needsSetup: true });
+    return NextResponse.json({ isConfigured: false, needsSetup: true });
   }
 } 

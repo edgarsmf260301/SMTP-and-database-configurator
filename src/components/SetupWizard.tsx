@@ -733,7 +733,7 @@ export default function SetupWizard() {
             </div>
             <h2 className="text-2xl sm:text-3xl font-bold text-white">¡Configuración Completada!</h2>
             <p className="text-sm sm:text-lg text-gray-300 max-w-2xl mx-auto px-4">
-              Tu sistema de restaurante ha sido configurado exitosamente. Ya puedes comenzar a usar todas las funcionalidades.
+              Tu sistema de restaurante ha sido configurado exitosamente. Ahora puedes iniciar sesión con tu cuenta de administrador para comenzar a usar todas las funcionalidades.
             </p>
             <div className="bg-gray-700 border border-green-500/30 rounded-lg p-3 sm:p-4 max-w-2xl mx-auto">
               <h3 className="font-semibold text-green-400 mb-2 text-sm sm:text-base">✅ Configuración exitosa:</h3>
@@ -745,10 +745,10 @@ export default function SetupWizard() {
               </ul>
             </div>
             <button
-              onClick={() => router.push('/dashboard')}
+              onClick={() => router.push('/login')}
               className="bg-gradient-to-r from-green-500 to-blue-500 text-white px-6 sm:px-8 py-3 rounded-lg font-semibold hover:from-green-600 hover:to-blue-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base"
             >
-              Ir al Dashboard
+              Ir al Login
             </button>
           </div>
         );

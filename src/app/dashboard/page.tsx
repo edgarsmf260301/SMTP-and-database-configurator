@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import ProtectedRoute from '@/components/ProtectedRoute';
 
-export default function DashboardPage() {
+function DashboardContent() {
   const [stats, setStats] = useState({
     totalOrders: 0,
     totalRevenue: 0,
@@ -183,5 +184,13 @@ export default function DashboardPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <ProtectedRoute requiredRole="admin">
+      <DashboardContent />
+    </ProtectedRoute>
   );
 } 

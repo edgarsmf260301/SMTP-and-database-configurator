@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -17,7 +17,7 @@ export default function LoginPage() {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ username, password }),
       });
 
       if (response.ok) {
@@ -37,20 +37,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
       <div className="max-w-sm sm:max-w-md w-full space-y-6 sm:space-y-8">
-        {/* Header */}
-        <div className="text-center">
-          <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto bg-gradient-to-br from-orange-400 to-red-500 rounded-full flex items-center justify-center mb-3 sm:mb-4 shadow-lg">
-            <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-          </div>
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-2">
-            Configuración de Sistema
-          </h1>
-          <p className="text-gray-300 text-sm sm:text-base md:text-lg">
-            Sistema de Gestión de Restaurante
-          </p>
-        </div>
+
 
         {/* Login Form */}
         <div className="bg-gray-800 rounded-xl sm:rounded-2xl shadow-2xl p-4 sm:p-6 md:p-8 border border-gray-700">
@@ -65,18 +52,18 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
-                Correo Electrónico
+              <label htmlFor="username" className="block text-sm font-medium text-gray-300 mb-2">
+                Nombre de Usuario
               </label>
               <input
-                id="email"
-                name="email"
-                type="email"
+                id="username"
+                name="username"
+                type="text"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-colors bg-gray-700 text-white placeholder-gray-400 text-sm sm:text-base"
-                placeholder="admin@viticos.com"
+                placeholder="admin"
               />
             </div>
 
@@ -108,7 +95,7 @@ export default function LoginPage() {
                   Recordarme
                 </label>
               </div>
-              <a href="#" className="text-sm text-orange-400 hover:text-orange-300">
+              <a href="/forgot-password" className="text-sm text-orange-400 hover:text-orange-300">
                 ¿Olvidaste tu contraseña?
               </a>
             </div>

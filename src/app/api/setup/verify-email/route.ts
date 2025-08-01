@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import User from '@/models/User';
+import { ensureRestaurantDatabase } from '@/lib/mongodb-utils';
+import { compareVerificationToken } from '@/lib/token-utils';
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,7 +18,9 @@ export async function POST(request: NextRequest) {
 
     // Conectar a MongoDB
     try {
-      await mongoose.connect(mongodb.uri, {
+      const connectionUri = ensureRestaurantDatabase(mongodb.uri);
+      
+      await mongoose.connect(connectionUri, {
         bufferCommands: false,
       });
 
@@ -31,7 +35,18 @@ export async function POST(request: NextRequest) {
       }
 
       // Verificar si el token coincide y no ha expirado
-      if (user.verificationToken !== token) {
+      let isTokenValid = false;
+      
+      try {
+        // Usar función de utilidad directamente para mayor confiabilidad
+        isTokenValid = await compareVerificationToken(token, user.verificationToken || '');
+        console.log('Verificación de token completada:', isTokenValid);
+      } catch (error) {
+        console.error('Error al verificar token:', error);
+        isTokenValid = false;
+      }
+      
+      if (!isTokenValid) {
         await mongoose.disconnect();
         return NextResponse.json(
           { error: 'Token de verificación inválido' },
@@ -67,9 +82,13 @@ export async function POST(request: NextRequest) {
         }
       });
     } catch (connectionError: unknown) {
+      console.error('Error de conexión a MongoDB:', connectionError);
       await mongoose.disconnect();
       const errorMessage = connectionError instanceof Error ? connectionError.message : 'Error de conexión desconocido';
-      throw new Error(`Error de conexión: ${errorMessage}`);
+      return NextResponse.json(
+        { error: `Error de conexión: ${errorMessage}` },
+        { status: 500 }
+      );
     }
   } catch (error: unknown) {
     console.error('Error verifying email:', error);

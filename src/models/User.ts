@@ -10,9 +10,15 @@ export interface IUser extends Document {
   emailVerified: boolean;
   verificationToken?: string;
   tokenExpires?: Date;
+  resetPasswordToken?: string;
+  resetPasswordExpires?: Date;
+  resetPasswordAttempts: number;
+  lastResetPasswordAttempt?: Date;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
+  compareVerificationToken(candidateToken: string): Promise<boolean>;
+  compareResetPasswordToken(candidateToken: string): Promise<boolean>;
 }
 
 const userSchema = new Schema<IUser>(
@@ -60,6 +66,22 @@ const userSchema = new Schema<IUser>(
       type: Date,
       required: false,
     },
+    resetPasswordToken: {
+      type: String,
+      required: false,
+    },
+    resetPasswordExpires: {
+      type: Date,
+      required: false,
+    },
+    resetPasswordAttempts: {
+      type: Number,
+      default: 0,
+    },
+    lastResetPasswordAttempt: {
+      type: Date,
+      required: false,
+    },
   },
   {
     timestamps: true,
@@ -68,20 +90,44 @@ const userSchema = new Schema<IUser>(
 
 // Middleware para hashear la contraseña antes de guardar
 userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
-
-  try {
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (error: unknown) {
-    next(error);
+  // Hashear contraseña si se modificó
+  if (this.isModified('password')) {
+    try {
+      const salt = await bcrypt.genSalt(10);
+      this.password = await bcrypt.hash(this.password, salt);
+    } catch (error: unknown) {
+      return next(error);
+    }
   }
+
+  next();
 });
 
 // Método para comparar contraseñas
 userSchema.methods.comparePassword = async function (candidatePassword: string): Promise<boolean> {
   return bcrypt.compare(candidatePassword, this.password);
+};
+
+// Método para comparar token de verificación
+userSchema.methods.compareVerificationToken = async function (candidateToken: string): Promise<boolean> {
+  try {
+    if (!this.verificationToken) return false;
+    return await bcrypt.compare(candidateToken, this.verificationToken);
+  } catch (error) {
+    console.error('Error comparing verification token:', error);
+    return false;
+  }
+};
+
+// Método para comparar token de reset de contraseña
+userSchema.methods.compareResetPasswordToken = async function (candidateToken: string): Promise<boolean> {
+  try {
+    if (!this.resetPasswordToken) return false;
+    return await bcrypt.compare(candidateToken, this.resetPasswordToken);
+  } catch (error) {
+    console.error('Error comparing reset password token:', error);
+    return false;
+  }
 };
 
 // Método para obtener usuario sin contraseña
@@ -91,4 +137,20 @@ userSchema.methods.toJSON = function () {
   return userObject;
 };
 
-export default mongoose.models.User || mongoose.model<IUser>('User', userSchema); 
+// Asegurar que el modelo se registre correctamente
+const UserModel = mongoose.models.User || mongoose.model<IUser>('User', userSchema);
+
+// Verificar que los métodos estén disponibles
+if (!UserModel.prototype.compareVerificationToken) {
+  UserModel.prototype.compareVerificationToken = async function (candidateToken: string): Promise<boolean> {
+    try {
+      if (!this.verificationToken) return false;
+      return await bcrypt.compare(candidateToken, this.verificationToken);
+    } catch (error) {
+      console.error('Error comparing verification token:', error);
+      return false;
+    }
+  };
+}
+
+export default UserModel; 

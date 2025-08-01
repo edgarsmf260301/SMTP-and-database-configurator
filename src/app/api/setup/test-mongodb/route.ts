@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import mongoose from 'mongoose';
+import { ensureRestaurantDatabase } from '@/lib/mongodb-utils';
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,7 +23,9 @@ export async function POST(request: NextRequest) {
 
     // Intentar conectar a MongoDB
     try {
-      await mongoose.connect(uri, {
+      const connectionUri = ensureRestaurantDatabase(uri);
+      
+      await mongoose.connect(connectionUri, {
         bufferCommands: false,
         maxPoolSize: 1,
       });

@@ -3,7 +3,10 @@ import mongoose from 'mongoose';
 import fs from 'fs';
 import path from 'path';
 import nodemailer from 'nodemailer';
+import bcrypt from 'bcryptjs';
 import User from '@/models/User';
+import { ensureRestaurantDatabase } from '@/lib/mongodb-utils';
+import { generateVerificationToken } from '@/lib/token-utils';
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,8 +21,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Crear contenido del archivo .env.local
+    // Asegurar que la URI incluya el nombre de la base de datos "Restaurant"
+    const finalMongoUri = ensureRestaurantDatabase(mongodb.uri);
+
     const envContent = `# Configuración de Base de Datos
-MONGODB_URI=${mongodb.uri}
+MONGODB_URI=${finalMongoUri}
 
 # Configuración de Email SMTP
 SMTP_EMAIL=${smtp.email}
@@ -36,7 +42,9 @@ NEXTAUTH_URL=http://localhost:3000
 
     // Conectar a MongoDB con la nueva URI
     try {
-      await mongoose.connect(mongodb.uri, {
+      const connectionUri = ensureRestaurantDatabase(mongodb.uri);
+      
+      await mongoose.connect(connectionUri, {
         bufferCommands: false,
       });
 
@@ -56,9 +64,33 @@ NEXTAUTH_URL=http://localhost:3000
         );
       }
 
+      // Verificar si el email ya está en uso
+      const existingUserWithEmail = await User.findOne({ email: email.toLowerCase() });
+      if (existingUserWithEmail) {
+        await mongoose.disconnect();
+        return NextResponse.json(
+          { error: 'Ya existe un usuario con este correo electrónico' },
+          { status: 400 }
+        );
+      }
+
+      // Verificar si el nombre de usuario ya está en uso
+      const existingUserWithName = await User.findOne({ name: name });
+      if (existingUserWithName) {
+        await mongoose.disconnect();
+        return NextResponse.json(
+          { error: 'Ya existe un usuario con este nombre' },
+          { status: 400 }
+        );
+      }
+
       // Generar token de verificación
       const verificationToken = generateVerificationToken();
       const tokenExpires = new Date(Date.now() + 110000); // 110 segundos
+
+      // Hashear el token antes de guardarlo
+      const salt = await bcrypt.genSalt(10);
+      const hashedToken = await bcrypt.hash(verificationToken, salt);
 
       // Crear el usuario administrador con verificación pendiente
       const adminUser = new User({
@@ -68,7 +100,7 @@ NEXTAUTH_URL=http://localhost:3000
         role: 'admin',
         isActive: false, // No activo hasta verificar email
         emailVerified: false,
-        verificationToken,
+        verificationToken: hashedToken, // Guardar el hash
         tokenExpires,
       });
 
@@ -124,9 +156,13 @@ NEXTAUTH_URL=http://localhost:3000
         }
       });
     } catch (connectionError: unknown) {
+      console.error('Error de conexión a MongoDB:', connectionError);
       await mongoose.disconnect();
       const errorMessage = connectionError instanceof Error ? connectionError.message : 'Error de conexión desconocido';
-      throw new Error(`Error de conexión: ${errorMessage}`);
+      return NextResponse.json(
+        { error: `Error de conexión: ${errorMessage}` },
+        { status: 500 }
+      );
     }
   } catch (error: unknown) {
     console.error('Error creating admin user:', error);
@@ -147,6 +183,4 @@ function generateSecret(): string {
   return result;
 }
 
-function generateVerificationToken(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-} 
+ 

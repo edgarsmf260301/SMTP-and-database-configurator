@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import nodemailer from 'nodemailer';
+import bcrypt from 'bcryptjs';
 import User from '@/models/User';
+import { ensureRestaurantDatabase } from '@/lib/mongodb-utils';
+import { generateVerificationToken } from '@/lib/token-utils';
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,7 +20,9 @@ export async function POST(request: NextRequest) {
 
     // Conectar a MongoDB
     try {
-      await mongoose.connect(mongodb.uri, {
+      const connectionUri = ensureRestaurantDatabase(mongodb.uri);
+      
+      await mongoose.connect(connectionUri, {
         bufferCommands: false,
       });
 
@@ -44,8 +49,12 @@ export async function POST(request: NextRequest) {
       const verificationToken = generateVerificationToken();
       const tokenExpires = new Date(Date.now() + 110000); // 110 segundos
 
-      // Actualizar el usuario con el nuevo token
-      user.verificationToken = verificationToken;
+      // Hashear el token antes de guardarlo
+      const salt = await bcrypt.genSalt(10);
+      const hashedToken = await bcrypt.hash(verificationToken, salt);
+
+      // Actualizar el usuario con el nuevo token hasheado
+      user.verificationToken = hashedToken;
       user.tokenExpires = tokenExpires;
       
       await user.save();
@@ -109,6 +118,4 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function generateVerificationToken(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-} 
+ 
