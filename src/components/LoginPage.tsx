@@ -2,43 +2,50 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import LoadingPage from './LoadingPage';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
+    setError('');
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
       });
-
       if (response.ok) {
+        // No necesitamos setIsLoading(false) aquí porque redirigimos
         router.push('/dashboard');
       } else {
-        const data = await response.json();
-        alert(data.error || 'Error al iniciar sesión');
+        setError('Usuario o contraseña incorrectos');
+        setIsLoading(false);
       }
     } catch (error) {
-      console.error('Login error:', error);
-      alert('Error al conectar con el servidor');
-    } finally {
+      setError('Error al conectar con el servidor');
       setIsLoading(false);
     }
   };
 
+  if (isLoading) {
+    return (
+      <LoadingPage 
+        title="Iniciando sesión..."
+        subtitle="Verificando tus credenciales"
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
       <div className="max-w-sm sm:max-w-md w-full space-y-6 sm:space-y-8">
-
-
         {/* Login Form */}
         <div className="bg-gray-800 rounded-xl sm:rounded-2xl shadow-2xl p-4 sm:p-6 md:p-8 border border-gray-700">
           <div className="text-center mb-6 sm:mb-8">
@@ -49,6 +56,12 @@ export default function LoginPage() {
               Accede a tu cuenta para gestionar el restaurante
             </p>
           </div>
+
+          {error && (
+            <div className="mb-4 p-3 bg-red-900 border border-red-700 rounded-lg text-red-300 text-sm text-center animate-fade-in">
+              {error}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
             <div>
@@ -66,7 +79,6 @@ export default function LoginPage() {
                 placeholder="admin"
               />
             </div>
-
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
                 Contraseña
@@ -82,7 +94,6 @@ export default function LoginPage() {
                 placeholder="••••••••"
               />
             </div>
-
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-3 sm:space-y-0">
               <div className="flex items-center">
                 <input
@@ -99,7 +110,6 @@ export default function LoginPage() {
                 ¿Olvidaste tu contraseña?
               </a>
             </div>
-
             <button
               type="submit"
               disabled={isLoading}
@@ -125,7 +135,6 @@ export default function LoginPage() {
             </p>
           </div>
         </div>
-
         {/* Footer */}
         <div className="text-center text-xs sm:text-sm text-gray-400">
           <p>&copy; 2024 Sistema de Restaurante. Todos los derechos reservados.</p>

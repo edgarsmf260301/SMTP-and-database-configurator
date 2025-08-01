@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import LoadingPage from '@/components/LoadingPage';
 
 function DashboardContent() {
   const [stats, setStats] = useState({
@@ -48,12 +49,10 @@ function DashboardContent() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando dashboard...</p>
-        </div>
-      </div>
+      <LoadingPage 
+        title="Cargando dashboard..."
+        subtitle="Preparando tu panel de administración"
+      />
     );
   }
 

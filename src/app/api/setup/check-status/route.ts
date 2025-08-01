@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
+import mongoose from 'mongoose';
 import fs from 'fs';
 import path from 'path';
+import { ensureRestaurantDatabase } from '@/lib/mongodb-utils';
 
 export async function GET() {
   try {
@@ -33,13 +35,24 @@ export async function GET() {
 
     // Verificar conexión a MongoDB
     try {
-      const dbConnect = (await import('@/lib/mongodb')).default;
-      await dbConnect();
+      const connectionUri = ensureRestaurantDatabase(process.env.MONGODB_URI || '');
+      
+      await mongoose.connect(connectionUri, {
+        bufferCommands: false,
+      });
+
+      // Verificar que la conexión esté activa
+      const db = mongoose.connection;
+      if (db.readyState !== 1) {
+        throw new Error('Conexión no establecida');
+      }
 
       // Importar el modelo User directamente
       const User = (await import('@/models/User')).default;
 
-      const adminCount = await User.countDocuments({ role: 'admin' });
+      const adminCount = await User.countDocuments({ role: 'admin', emailVerified: true });
+
+      await mongoose.disconnect();
 
       if (adminCount === 0) {
         return NextResponse.json({ isConfigured: false, needsSetup: true });
@@ -48,6 +61,7 @@ export async function GET() {
       return NextResponse.json({ isConfigured: true, needsSetup: false });
     } catch (error: unknown) {
       console.error('Error checking MongoDB connection:', error);
+      await mongoose.disconnect();
       return NextResponse.json({ isConfigured: false, needsSetup: true });
     }
   } catch (error: unknown) {

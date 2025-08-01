@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import dbConnect from '@/lib/mongodb';
+import mongoose from 'mongoose';
 import User from '@/models/User';
 import { verifyJWTToken } from '@/lib/token-utils';
+import { ensureRestaurantDatabase } from '@/lib/mongodb-utils';
 
 export async function GET(request: NextRequest) {
   try {
@@ -36,10 +37,22 @@ export async function GET(request: NextRequest) {
       }
       
       // Conectar a la base de datos
-      await dbConnect();
+      const connectionUri = ensureRestaurantDatabase(process.env.MONGODB_URI || '');
+      
+      await mongoose.connect(connectionUri, {
+        bufferCommands: false,
+      });
+
+      // Verificar que la conexión esté activa
+      const db = mongoose.connection;
+      if (db.readyState !== 1) {
+        throw new Error('Conexión no establecida');
+      }
 
       // Verificar que el usuario existe y está activo
       const user = await User.findById(decoded.userId).select('-password');
+      
+      await mongoose.disconnect();
       
       if (!user || !user.isActive || !user.emailVerified) {
         return NextResponse.json({ isAuthenticated: false, authenticated: false, error: 'User not found or inactive' }, { status: 401 });
@@ -57,11 +70,13 @@ export async function GET(request: NextRequest) {
       });
 
     } catch (jwtError) {
+      await mongoose.disconnect();
       return NextResponse.json({ isAuthenticated: false, authenticated: false, error: 'Invalid token' }, { status: 401 });
     }
 
   } catch (error) {
     console.error('Error checking session:', error);
+    await mongoose.disconnect();
     return NextResponse.json({ isAuthenticated: false, authenticated: false, error: 'Server error' }, { status: 500 });
   }
 } 

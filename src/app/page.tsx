@@ -1,55 +1,51 @@
-import { redirect } from 'next/navigation';
-import fs from 'fs';
-import path from 'path';
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import SetupWizard from '@/components/SetupWizard';
 import LoginPage from '@/components/LoginPage';
+import LoadingPage from '@/components/LoadingPage';
+import SystemCheckPage from '@/components/SystemCheckPage';
 
-async function checkSetupStatus() {
-  try {
-    const envPath = path.join(process.cwd(), '.env.local');
-    const envExists = fs.existsSync(envPath);
-    
-    if (!envExists) {
-      return { needsSetup: true };
-    }
+export default function HomePage() {
+  const [isChecking, setIsChecking] = useState(true);
+  const [needsSetup, setNeedsSetup] = useState(false);
+  const router = useRouter();
 
-    const envContent = fs.readFileSync(envPath, 'utf-8');
-    const requiredVars = ['MONGODB_URI', 'SMTP_EMAIL', 'SMTP_PASSWORD'];
-    const missingVars = requiredVars.filter(varName => {
-      const regex = new RegExp(`^${varName}=`, 'm');
-      return !regex.test(envContent);
-    });
+  useEffect(() => {
+    const checkSetupStatus = async () => {
+      try {
+        // Simular un pequeño delay para mostrar la verificación
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        const response = await fetch('/api/setup/check-status', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          cache: 'no-store',
+        });
 
-    if (missingVars.length > 0) {
-      return { needsSetup: true };
-    }
-
-    // Verificar si hay un usuario admin verificado
-    try {
-      const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/setup/check-status`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        return { needsSetup: data.needsSetup };
+        if (response.ok) {
+          const data = await response.json();
+          setNeedsSetup(data.needsSetup);
+        } else {
+          setNeedsSetup(true);
+        }
+      } catch (error) {
+        console.error('Error checking setup status:', error);
+        setNeedsSetup(true);
+      } finally {
+        setIsChecking(false);
       }
-    } catch (error) {
-      console.error('Error checking admin status:', error);
-    }
+    };
 
-    return { needsSetup: true };
-  } catch (error: unknown) {
-    console.error('Error checking setup status:', error);
-    return { needsSetup: true };
+    checkSetupStatus();
+  }, []);
+
+  if (isChecking) {
+    return <SystemCheckPage />;
   }
-}
-
-export default async function HomePage() {
-  const { needsSetup } = await checkSetupStatus();
 
   if (needsSetup) {
     return <SetupWizard />;

@@ -97,6 +97,8 @@ async function checkSystemConfiguration(): Promise<boolean> {
       return false;
     }
 
+    // Si las variables están presentes, asumimos que el sistema está configurado
+    // La verificación completa se hace en la página principal
     return true;
   } catch (error) {
     console.error('Error checking system configuration:', error);
@@ -107,11 +109,9 @@ async function checkSystemConfiguration(): Promise<boolean> {
 async function checkAuthentication(request: NextRequest): Promise<boolean> {
   try {
     // Verificar si hay una sesión válida
-    const sessionToken = request.cookies.get('next-auth.session-token')?.value ||
-                        request.cookies.get('__Secure-next-auth.session-token')?.value ||
-                        request.cookies.get('auth-token')?.value;
+    const authToken = request.cookies.get('auth-token')?.value;
 
-    if (!sessionToken) {
+    if (!authToken) {
       return false;
     }
 

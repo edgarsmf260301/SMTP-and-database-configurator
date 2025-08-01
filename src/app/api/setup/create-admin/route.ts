@@ -148,7 +148,7 @@ NEXTAUTH_URL=http://localhost:3000
 
       return NextResponse.json({
         success: true,
-        message: 'Usuario administrador creado. Se ha enviado un token de verificación a tu email.',
+        message: 'Código de verificación enviado',
         user: {
           name: adminUser.name,
           email: adminUser.email,

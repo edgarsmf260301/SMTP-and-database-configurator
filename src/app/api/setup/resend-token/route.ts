@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        message: 'Nuevo token de verificación enviado exitosamente.',
+        message: 'Código de verificación enviado',
       });
     } catch (connectionError: unknown) {
       await mongoose.disconnect();

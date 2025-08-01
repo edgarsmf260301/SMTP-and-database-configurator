@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import dbConnect from '@/lib/mongodb';
+import mongoose from 'mongoose';
 import User from '@/models/User';
 import { generateVerificationToken } from '@/lib/token-utils';
 import bcrypt from 'bcryptjs';
 import nodemailer from 'nodemailer';
+import { ensureRestaurantDatabase } from '@/lib/mongodb-utils';
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('Forgot password endpoint called');
     const { email } = await request.json();
 
     if (!email) {
@@ -16,26 +18,43 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Conectar a la base de datos
-    await dbConnect();
+    console.log('Email received:', email);
+    console.log('SMTP_EMAIL configured:', !!process.env.SMTP_EMAIL);
+    console.log('SMTP_PASSWORD configured:', !!process.env.SMTP_PASSWORD);
 
-    // Buscar el usuario por email
-    const user = await User.findOne({ email: email.toLowerCase() });
+    // Conectar a MongoDB
+    const connectionUri = ensureRestaurantDatabase(process.env.MONGODB_URI || '');
+    
+    try {
+      await mongoose.connect(connectionUri, {
+        bufferCommands: false,
+      });
 
-    if (!user) {
-      return NextResponse.json(
-        { error: 'No existe una cuenta con este correo electrónico' },
-        { status: 404 }
-      );
-    }
+      // Verificar que la conexión esté activa
+      const db = mongoose.connection;
+      if (db.readyState !== 1) {
+        throw new Error('Conexión no establecida');
+      }
 
-    // Verificar si el usuario está activo
-    if (!user.isActive) {
-      return NextResponse.json(
-        { error: 'Tu cuenta ha sido desactivada' },
-        { status: 401 }
-      );
-    }
+      // Buscar el usuario por email
+      const user = await User.findOne({ email: email.toLowerCase() });
+
+      if (!user) {
+        await mongoose.disconnect();
+        return NextResponse.json(
+          { error: 'No existe una cuenta con este correo electrónico' },
+          { status: 404 }
+        );
+      }
+
+      // Verificar si el usuario está activo
+      if (!user.isActive) {
+        await mongoose.disconnect();
+        return NextResponse.json(
+          { error: 'Tu cuenta ha sido desactivada' },
+          { status: 401 }
+        );
+      }
 
     // Verificar restricciones de tiempo
     const now = new Date();
@@ -58,6 +77,7 @@ export async function POST(request: NextRequest) {
       }
 
       if (minutesSinceLastAttempt < requiredWaitTime) {
+        await mongoose.disconnect();
         const remainingMinutes = Math.ceil(requiredWaitTime - minutesSinceLastAttempt);
         return NextResponse.json(
           { 
@@ -83,50 +103,92 @@ export async function POST(request: NextRequest) {
     user.resetPasswordAttempts = attempts + 1;
     user.lastResetPasswordAttempt = now;
 
-    await user.save();
+      await user.save();
 
-    // Enviar email con el token
-    const transporter = nodemailer.createTransporter({
-      service: 'gmail',
-      auth: {
-        user: process.env.SMTP_EMAIL,
-        pass: process.env.SMTP_PASSWORD,
-      },
-    });
+             // Enviar email con el token
+                         try {
+           console.log('Creating nodemailer transporter...');
+           
+           // Verificar que las variables de entorno estén configuradas
+           if (!process.env.SMTP_EMAIL || !process.env.SMTP_PASSWORD) {
+             throw new Error('SMTP configuration missing');
+           }
+           
+           // Verificar que nodemailer esté disponible
+           if (typeof nodemailer === 'undefined') {
+             throw new Error('Nodemailer not available');
+           }
+           
+           console.log('Nodemailer available, creating transporter...');
+           
+           const transporter = nodemailer.createTransport({
+             host: 'smtp.gmail.com',
+             port: 587,
+             secure: false, // true for 465, false for other ports
+             auth: {
+               user: process.env.SMTP_EMAIL,
+               pass: process.env.SMTP_PASSWORD,
+             },
+           });
 
-    const mailOptions = {
-      from: process.env.SMTP_EMAIL,
-      to: email,
-      subject: 'Recuperación de Contraseña - Sistema de Restaurante',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #f97316;">Recuperación de Contraseña</h2>
-          <p>Hola <strong>${user.name}</strong>,</p>
-          <p>Has solicitado recuperar tu contraseña. Usa el siguiente código para continuar:</p>
-          
-          <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
-            <h3 style="color: #374151; margin: 0 0 10px 0;">Tu código de verificación es:</h3>
-            <div style="font-size: 32px; font-weight: bold; color: #f97316; letter-spacing: 8px; font-family: monospace;">
-              ${resetToken}
-            </div>
-            <p style="color: #6b7280; font-size: 14px; margin: 10px 0 0 0;">
-              Este código expira en 110 segundos
-            </p>
-          </div>
-          
-          <p style="color: #6b7280; font-size: 14px;">
-            Si no solicitaste esta recuperación, puedes ignorar este email.
-          </p>
-        </div>
-      `,
-    };
+           console.log('Transporter created, preparing mail options...');
 
-    await transporter.sendMail(mailOptions);
+           const mailOptions = {
+             from: process.env.SMTP_EMAIL,
+             to: email,
+             subject: 'Recuperación de Contraseña - Sistema de Restaurante',
+             html: `
+               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                 <h2 style="color: #f97316;">Recuperación de Contraseña</h2>
+                 <p>Hola <strong>${user.name}</strong>,</p>
+                 <p>Has solicitado recuperar tu contraseña. Usa el siguiente código para continuar:</p>
+                 
+                 <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
+                   <h3 style="color: #374151; margin: 0 0 10px 0;">Tu código de verificación es:</h3>
+                   <div style="font-size: 32px; font-weight: bold; color: #f97316; letter-spacing: 8px; font-family: monospace;">
+                     ${resetToken}
+                   </div>
+                   <p style="color: #6b7280; font-size: 14px; margin: 10px 0 0 0;">
+                     Este código expira en 110 segundos
+                   </p>
+                 </div>
+                 
+                 <p style="color: #6b7280; font-size: 14px;">
+                   Si no solicitaste esta recuperación, puedes ignorar este email.
+                 </p>
+               </div>
+             `,
+           };
 
-    return NextResponse.json({
-      success: true,
-      message: 'Se ha enviado un código de verificación a tu correo electrónico.',
-    });
+            console.log('Sending email...');
+            await transporter.sendMail(mailOptions);
+            console.log('Email sent successfully');
+                } catch (emailError) {
+           console.error('Error enviando email:', emailError);
+           // Si falla el envío de email, aún así guardamos el token para que el usuario pueda intentar de nuevo
+           // pero informamos del error
+           await mongoose.disconnect();
+           return NextResponse.json(
+             { error: `Error al enviar el email: ${emailError instanceof Error ? emailError.message : 'Error desconocido'}. Por favor, intenta de nuevo.` },
+             { status: 500 }
+           );
+         }
+
+      await mongoose.disconnect();
+
+             return NextResponse.json({
+         success: true,
+         message: 'Código de verificación enviado',
+       });
+    } catch (connectionError: unknown) {
+      console.error('Error de conexión a MongoDB:', connectionError);
+      await mongoose.disconnect();
+      const errorMessage = connectionError instanceof Error ? connectionError.message : 'Error de conexión desconocido';
+      return NextResponse.json(
+        { error: `Error de conexión: ${errorMessage}` },
+        { status: 500 }
+      );
+    }
 
   } catch (error: unknown) {
     console.error('Forgot password error:', error);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function ForgotPasswordPage() {
@@ -8,7 +8,32 @@ export default function ForgotPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [countdown, setCountdown] = useState(0);
+  const [canResend, setCanResend] = useState(true);
   const router = useRouter();
+
+  // Efecto para manejar el cronómetro
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (countdown > 0) {
+      interval = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            setCanResend(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [countdown]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,12 +52,28 @@ export default function ForgotPasswordPage() {
 
       if (response.ok) {
         setMessage(data.message);
+        // Redirigir a la página de reset después de 2 segundos
+        setTimeout(() => {
+          router.push(`/reset-password?email=${encodeURIComponent(email)}`);
+        }, 2000);
       } else {
-        setError(data.error || 'Error al procesar la solicitud');
+        const errorMessage = data.error || 'Error al procesar la solicitud';
+        setError(errorMessage);
+        
+        // Si hay un error de rate limiting, extraer el tiempo restante
+        if (response.status === 429 && data.remainingTime) {
+          const remainingSeconds = Math.ceil(data.remainingTime);
+          setCountdown(remainingSeconds);
+          setCanResend(false);
+        }
       }
     } catch (error) {
       console.error('Forgot password error:', error);
-      setError('Error al conectar con el servidor');
+      if (error instanceof Error) {
+        setError(`Error al conectar con el servidor: ${error.message}`);
+      } else {
+        setError('Error al conectar con el servidor');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -64,6 +105,15 @@ export default function ForgotPasswordPage() {
             </div>
           )}
 
+          {!canResend && countdown > 0 && (
+            <div className="mb-4 p-3 bg-yellow-900 border border-yellow-700 rounded-lg text-yellow-300 text-sm">
+              <div className="flex items-center justify-center space-x-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-300"></div>
+                <span>Espera antes de solicitar otro código: {Math.floor(countdown / 60)}:{(countdown % 60).toString().padStart(2, '0')}</span>
+              </div>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
@@ -83,13 +133,19 @@ export default function ForgotPasswordPage() {
 
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || !canResend}
               className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-2 sm:py-3 px-4 rounded-lg font-medium hover:from-orange-600 hover:to-red-600 focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 text-sm sm:text-base"
             >
               {isLoading ? (
                 <div className="flex items-center justify-center">
                   <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-white mr-2"></div>
                   <span className="text-xs sm:text-sm">Enviando...</span>
+                </div>
+              ) : !canResend ? (
+                <div className="flex items-center justify-center">
+                  <span className="text-xs sm:text-sm">
+                    Espera {Math.floor(countdown / 60)}:{(countdown % 60).toString().padStart(2, '0')}
+                  </span>
                 </div>
               ) : (
                 'Enviar Código de Verificación'
