@@ -64,7 +64,7 @@ export default function DashboardPage() {
           <div className="flex justify-between items-center py-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
-                Restaurant Viticos
+                Sistema de Restaurante
               </h1>
               <p className="text-gray-600">Panel de Administración</p>
             </div>
@@ -152,7 +152,7 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {recentOrders.map((order: any) => (
+                {recentOrders.map((order: unknown) => (
                   <tr key={order.id}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {order.customer}

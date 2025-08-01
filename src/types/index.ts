@@ -20,7 +20,7 @@ export interface UserRegister extends UserLogin {
 }
 
 // Tipos de respuesta de API
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   message: string;
   data?: T;

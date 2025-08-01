@@ -7,6 +7,9 @@ export interface IUser extends Document {
   password: string;
   role: 'admin' | 'manager' | 'staff';
   isActive: boolean;
+  emailVerified: boolean;
+  verificationToken?: string;
+  tokenExpires?: Date;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -45,6 +48,18 @@ const userSchema = new Schema<IUser>(
       type: Boolean,
       default: true,
     },
+    emailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    verificationToken: {
+      type: String,
+      required: false,
+    },
+    tokenExpires: {
+      type: Date,
+      required: false,
+    },
   },
   {
     timestamps: true,
@@ -59,7 +74,7 @@ userSchema.pre('save', async function (next) {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
     next();
-  } catch (error: any) {
+  } catch (error: unknown) {
     next(error);
   }
 });
