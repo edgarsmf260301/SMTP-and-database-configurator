@@ -130,7 +130,18 @@ export default function LoadingPage({
 
         {/* Footer */}
         <div className="text-center text-xs sm:text-sm text-gray-400">
-          <p>&copy; 2024 Sistema de Restaurante. Todos los derechos reservados.</p>
+          <p>
+            &copy; 2024 Sistema de Restaurante
+            {' '}|{' '}
+            <a
+              href="https://my-portfolio-lime-zeta-70.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-orange-400 hover:text-orange-300 font-medium transition-colors"
+            >
+              Edgar Martinez - Desarrollador Web
+            </a>
+          </p>
         </div>
       </div>
     </div>

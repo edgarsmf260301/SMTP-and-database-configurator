@@ -16,43 +16,32 @@ export async function GET() {
 
     // Leer el archivo .env.local
     const envContent = fs.readFileSync(envPath, 'utf-8');
-    
+
+    // Extraer variables del archivo .env.local
+    const getEnvVar = (name: string) => {
+      const match = envContent.match(new RegExp(`^${name}=(.*)$`, 'm'));
+      return match ? match[1].trim() : '';
+    };
+
+    const mongoUri = getEnvVar('MONGODB_URI');
+    const smtpEmail = getEnvVar('SMTP_EMAIL');
+    const smtpPassword = getEnvVar('SMTP_PASSWORD');
+
     // Verificar que las variables necesarias estén presentes
-    const requiredVars = [
-      'MONGODB_URI',
-      'SMTP_EMAIL',
-      'SMTP_PASSWORD'
-    ];
-
-    const missingVars = requiredVars.filter(varName => {
-      const regex = new RegExp(`^${varName}=`, 'm');
-      return !regex.test(envContent);
-    });
-
-    if (missingVars.length > 0) {
+    if (!mongoUri || !smtpEmail || !smtpPassword) {
       return NextResponse.json({ isConfigured: false, needsSetup: true });
     }
 
-    // Verificar conexión a MongoDB
+    // Verificar conexión a MongoDB usando el método global
     try {
-      const connectionUri = ensureRestaurantDatabase(process.env.MONGODB_URI || '');
-      
-      await mongoose.connect(connectionUri, {
-        bufferCommands: false,
-      });
-
-      // Verificar que la conexión esté activa
-      const db = mongoose.connection;
-      if (db.readyState !== 1) {
-        throw new Error('Conexión no establecida');
-      }
+      // Importar el método dbConnect desde lib/mongodb.ts
+      const dbConnect = (await import('@/lib/mongodb')).default;
+      // dbConnect ya usa la URI de entorno, pero para flexibilidad, permite pasar la URI si es necesario
+      await dbConnect();
 
       // Importar el modelo User directamente
       const User = (await import('@/models/User')).default;
-
       const adminCount = await User.countDocuments({ role: 'admin', emailVerified: true });
-
-      await mongoose.disconnect();
 
       if (adminCount === 0) {
         return NextResponse.json({ isConfigured: false, needsSetup: true });
@@ -61,7 +50,6 @@ export async function GET() {
       return NextResponse.json({ isConfigured: true, needsSetup: false });
     } catch (error: unknown) {
       console.error('Error checking MongoDB connection:', error);
-      await mongoose.disconnect();
       return NextResponse.json({ isConfigured: false, needsSetup: true });
     }
   } catch (error: unknown) {
