@@ -137,17 +137,31 @@ export default function LoginPage() {
         </div>
         {/* Footer */}
         <div className="text-center text-xs sm:text-sm text-gray-400">
+<<<<<<< HEAD
           <footer className="mt-10 text-center text-gray-400 text-xs sm:text-sm">
             © 2025 Sistema de Restaurante{' '}
+=======
+          <p>
+            &copy; 2025 Sistema de Restaurante
+            {' '}|{' '}
+>>>>>>> 608db6c74894ce726648d2d64f95bcbd6c269349
             <a
               href="https://my-portfolio-lime-zeta-70.vercel.app/"
               target="_blank"
               rel="noopener noreferrer"
+<<<<<<< HEAD
               className="text-orange-400 hover:underline font-semibold"
             >
               Edgar Martinez - Desarrollador Web
             </a>
           </footer>
+=======
+              className="text-orange-400 hover:text-orange-300 font-medium transition-colors"
+            >
+              Edgar Martinez - Desarrollador Web
+            </a>
+          </p>
+>>>>>>> 608db6c74894ce726648d2d64f95bcbd6c269349
         </div>
       </div>
     </div>

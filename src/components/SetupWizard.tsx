@@ -6,7 +6,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
+<<<<<<< HEAD
 import { motion, AnimatePresence, easeInOut, easeOut, easeIn } from 'framer-motion';
+=======
+import { motion, AnimatePresence, cubicBezier } from 'framer-motion';
+>>>>>>> 608db6c74894ce726648d2d64f95bcbd6c269349
 
 // Esquemas de validación
 const mongodbSchema = z.object({
@@ -28,7 +32,11 @@ const adminSchema = z.object({
   path: ["confirmPassword"],
 });
 
+<<<<<<< HEAD
 type Step = 'welcome' | 'mongodb' | 'smtp' | 'admin' | 'complete' | 'checking';
+=======
+type Step = 'welcome' | 'mongodb' | 'smtp' | 'admin' | 'admin-exists' | 'complete';
+>>>>>>> 608db6c74894ce726648d2d64f95bcbd6c269349
 
 interface SetupData {
   mongodb: { uri: string };
@@ -37,6 +45,7 @@ interface SetupData {
 }
 
 export default function SetupWizard() {
+<<<<<<< HEAD
   // Detectar si existe .env.local y cargar sus valores
   const [currentStep, setCurrentStep] = useState<Step>('checking');
   useEffect(() => {
@@ -77,10 +86,77 @@ export default function SetupWizard() {
     checkEnvLocal();
     return () => { mounted = false; };
   }, []);
+=======
+  const [currentStep, setCurrentStep] = useState<Step>('welcome');
+  // Verificación local para evitar verificación repetida
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const verified = localStorage.getItem('setup_verified');
+      if (verified === 'true') {
+        router.replace('/login');
+      }
+    }
+  }, []);
+
+  // Guardar verificación en localStorage al llegar al paso 'complete'
+  useEffect(() => {
+    if (currentStep === 'complete' && typeof window !== 'undefined') {
+      localStorage.setItem('setup_verified', 'true');
+    }
+  }, [currentStep]);
+>>>>>>> 608db6c74894ce726648d2d64f95bcbd6c269349
   const [direction, setDirection] = useState(0); // Para controlar la dirección de la animación
+  // Estado para saber si ya existe admin
+  const [adminExists, setAdminExists] = useState<null | boolean>(null);
+  const [setupData, setSetupData] = useState<SetupData>({
+    mongodb: { uri: '' },
+    smtp: { email: '', password: '' },
+    admin: { name: '', email: '', password: '' },
+  });
+  // Verificar si ya existe admin al llegar al paso 'admin'
+  useEffect(() => {
+    if (currentStep === 'admin') {
+      setIsLoading(true);
+      setError('');
+      fetch('/api/setup/admin-exists', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mongodb: setupData.mongodb,
+          smtp: setupData.smtp
+        }),
+      })
+        .then(async (res) => {
+          if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.error || 'Error al verificar admin');
+          }
+          return res.json();
+        })
+        .then((data) => {
+          if (data.exists) {
+            setAdminExists(true);
+            setTimeout(() => {
+              goToNextStep('admin-exists');
+            }, 2000);
+          } else {
+            setAdminExists(false);
+          }
+        })
+        .catch((err) => {
+          setError(err.message || 'Error al verificar admin');
+        })
+        .finally(() => setIsLoading(false));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStep, setupData.mongodb]);
 
   // Variantes de animación para las transiciones
+<<<<<<< HEAD
 
+=======
+  const customEase = cubicBezier(0.4, 0.0, 0.2, 1);
+>>>>>>> 608db6c74894ce726648d2d64f95bcbd6c269349
   const pageVariants = {
     initial: (direction: number) => ({
       x: direction > 0 ? 300 : -300,
@@ -93,7 +169,11 @@ export default function SetupWizard() {
       scale: 1,
       transition: {
         duration: 0.5,
+<<<<<<< HEAD
         ease: easeInOut,
+=======
+        ease: customEase,
+>>>>>>> 608db6c74894ce726648d2d64f95bcbd6c269349
         staggerChildren: 0.1,
       },
     },
@@ -103,7 +183,11 @@ export default function SetupWizard() {
       scale: 0.95,
       transition: {
         duration: 0.3,
+<<<<<<< HEAD
         ease: easeOut,
+=======
+        ease: customEase,
+>>>>>>> 608db6c74894ce726648d2d64f95bcbd6c269349
       },
     }),
   };
@@ -115,7 +199,11 @@ export default function SetupWizard() {
       y: 0,
       transition: {
         duration: 0.4,
+<<<<<<< HEAD
         ease: easeInOut,
+=======
+        ease: customEase,
+>>>>>>> 608db6c74894ce726648d2d64f95bcbd6c269349
       }
     },
     exit: { 
@@ -127,11 +215,7 @@ export default function SetupWizard() {
       }
     },
   };
-  const [setupData, setSetupData] = useState<SetupData>({
-    mongodb: { uri: '' },
-    smtp: { email: '', password: '' },
-    admin: { name: '', email: '', password: '' },
-  });
+  // (Eliminada declaración duplicada de setupData)
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   // Estados para verificación de email
@@ -650,6 +734,7 @@ export default function SetupWizard() {
         );
 
       case 'admin':
+<<<<<<< HEAD
         // Solo permitir reenviar token cuando el tiempo haya expirado
         const canResend = timeLeft === 0 && (resendAttempts < 1 || (resendCooldown && new Date() > resendCooldown));
         const cooldownLeft = resendCooldown ? Math.max(0, Math.floor((resendCooldown.getTime() - Date.now()) / 1000)) : 0;
@@ -672,6 +757,44 @@ export default function SetupWizard() {
                 <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <circle cx="12" cy="12" r="10" strokeWidth="2" stroke="currentColor" fill="none" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3" />
+=======
+        // Si está cargando la verificación de admin
+        if (isLoading && adminExists === null) {
+          return (
+            <div className="flex flex-col items-center justify-center min-h-[300px]">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center mb-4 animate-pulse">
+                <svg className="w-6 h-6 sm:w-8 sm:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+              <p className="text-white text-lg font-semibold">Verificando existencia de usuario administrador...</p>
+            </div>
+          );
+        }
+        // Si ya existe admin, mostrar mensaje y saltar
+        if (adminExists) {
+          return (
+            <div className="flex flex-col items-center justify-center min-h-[300px]">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center mb-4 animate-bounce">
+                <svg className="w-6 h-6 sm:w-8 sm:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+              <p className="text-orange-300 text-lg font-semibold text-center">Ya existe un usuario administrador en la base de datos.<br/>Serás redirigido al siguiente paso.</p>
+            </div>
+          );
+        }
+        // Si no existe admin, mostrar el formulario normal
+        // ...existing code for admin form and verification...
+        const canResend = resendAttempts < 1 || (resendCooldown && new Date() > resendCooldown);
+        const cooldownLeft = resendCooldown ? Math.max(0, Math.floor((resendCooldown.getTime() - Date.now()) / 1000)) : 0;
+        return (
+          <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
+            <div className="text-center">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center mb-3 sm:mb-4 shadow-lg">
+                <svg className="w-6 h-6 sm:w-8 sm:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+>>>>>>> 608db6c74894ce726648d2d64f95bcbd6c269349
                 </svg>
               </motion.div>
               <motion.p
@@ -959,6 +1082,7 @@ export default function SetupWizard() {
                     <p className="text-red-300 text-xs sm:text-sm">{error}</p>
                   </div>
                 )}
+<<<<<<< HEAD
                 <div className="flex flex-col sm:flex-row justify-between space-y-3 sm:space-y-0 mt-4">
                   <motion.button
                     type="button"
@@ -971,6 +1095,21 @@ export default function SetupWizard() {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     transition={{ duration: 0.2 }}
+=======
+
+                <div className="flex flex-col sm:flex-row justify-between space-y-3 sm:space-y-0">
+                  <button
+                    type="button"
+                    onClick={() => goToPreviousStep('smtp')}
+                    className="px-4 sm:px-6 py-2 text-gray-400 hover:text-white transition-colors text-sm sm:text-base"
+                  >
+                    Atrás
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="bg-gradient-to-r from-purple-600 to-purple-700 text-white px-4 sm:px-6 py-2 rounded-lg hover:from-purple-700 hover:to-purple-800 disabled:opacity-50 transition-all duration-200 shadow-lg text-sm sm:text-base"
+>>>>>>> 608db6c74894ce726648d2d64f95bcbd6c269349
                   >
                     Atrás
                   </motion.button>
@@ -1000,6 +1139,7 @@ export default function SetupWizard() {
                       {isLoading ? 'Verificando...' : 'Verificar Email'}
                     </motion.button>
                   </div>
+<<<<<<< HEAD
                 </div>
               </motion.form>
             </motion.div>
@@ -1007,10 +1147,37 @@ export default function SetupWizard() {
         }
 
         return null;
+=======
+                </form>
+              </>
+            )}
+          </div>
+        );
+      case 'admin-exists':
+        // Mensaje final si ya existe admin
+        return (
+          <div className="flex flex-col items-center justify-center min-h-[300px]">
+            <div className="w-16 h-16 sm:w-24 sm:h-24 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center mb-4 animate-bounce">
+              <svg className="w-8 h-8 sm:w-12 sm:h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-bold text-orange-300 text-center mb-2">Ya existe un usuario administrador</h2>
+            <p className="text-base sm:text-lg text-gray-300 text-center mb-4">No es necesario crear otro usuario administrador. Puedes continuar con la configuración.</p>
+            <button
+              onClick={() => goToNextStep('complete')}
+              className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-6 sm:px-8 py-3 rounded-lg font-semibold hover:from-orange-600 hover:to-orange-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base"
+            >
+              Continuar
+            </button>
+          </div>
+        );
+>>>>>>> 608db6c74894ce726648d2d64f95bcbd6c269349
 
 
 
       case 'complete':
+<<<<<<< HEAD
         return (
           <div className="text-center space-y-4 sm:space-y-6">
             <div className="w-16 h-16 sm:w-24 sm:h-24 mx-auto bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center shadow-lg">
@@ -1037,8 +1204,36 @@ export default function SetupWizard() {
             >
               Ir al Login
             </button>
+=======
+      return (
+        <div className="text-center space-y-4 sm:space-y-6">
+          <div className="w-16 h-16 sm:w-24 sm:h-24 mx-auto bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center shadow-lg">
+            <svg className="w-8 h-8 sm:w-12 sm:h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+>>>>>>> 608db6c74894ce726648d2d64f95bcbd6c269349
           </div>
-        );
+          <h2 className="text-2xl sm:text-3xl font-bold text-white">¡Configuración Completada!</h2>
+          <p className="text-sm sm:text-lg text-gray-300 max-w-2xl mx-auto px-4">
+            Tu sistema de restaurante ha sido configurado exitosamente. Ahora puedes iniciar sesión con tu cuenta de administrador para comenzar a usar todas las funcionalidades.
+          </p>
+          <div className="bg-gray-700 border border-green-500/30 rounded-lg p-3 sm:p-4 max-w-2xl mx-auto">
+            <h3 className="font-semibold text-green-400 mb-2 text-sm sm:text-base">✅ Configuración exitosa:</h3>
+            <ul className="text-gray-300 text-xs sm:text-sm space-y-1">
+              <li>• Conexión a MongoDB establecida</li>
+              <li>• Configuración SMTP verificada</li>
+              <li>• Usuario administrador creado</li>
+              <li>• Base de datos Restaurant_System inicializada</li>
+            </ul>
+          </div>
+          <button
+            onClick={() => router.push('/login')}
+            className="bg-gradient-to-r from-green-500 to-blue-500 text-white px-6 sm:px-8 py-3 rounded-lg font-semibold hover:from-green-600 hover:to-blue-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base"
+          >
+            Ir al Login
+          </button>
+        </div>
+      );
 
       default:
         return null;
@@ -1207,10 +1402,17 @@ export default function SetupWizard() {
             </AnimatePresence>
           </motion.div>
         </div>
+<<<<<<< HEAD
         {/* Footer solo en bienvenida y finalizado */}
         {(currentStep === 'welcome' || currentStep === 'complete') && (
           <footer className="mt-10 text-center text-gray-400 text-xs sm:text-sm">
             © 2025 Sistema de Restaurante{' '}
+=======
+        {/* Footer solo en bienvenida */}
+        {currentStep === 'welcome' && (
+          <footer className="mt-10 text-center text-gray-400 text-xs sm:text-sm">
+            © 2025 Sistema de Restaurante |{' '}
+>>>>>>> 608db6c74894ce726648d2d64f95bcbd6c269349
             <a
               href="https://my-portfolio-lime-zeta-70.vercel.app/"
               target="_blank"

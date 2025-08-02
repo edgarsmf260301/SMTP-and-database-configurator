@@ -1,8 +1,19 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function SystemCheckPage() {
+  const router = useRouter();
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const verified = localStorage.getItem('setup_verified');
+      if (verified === 'true') {
+        router.replace('/login');
+      }
+    }
+  }, []);
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
       <div className="max-w-sm sm:max-w-md w-full space-y-6 sm:space-y-8">
@@ -128,10 +139,14 @@ export default function SystemCheckPage() {
           </div>
         </div>
 
+<<<<<<< HEAD
         {/* Footer */}
         <div className="text-center text-xs sm:text-sm text-gray-400">
           {/* Footer eliminado por requerimiento */}
         </div>
+=======
+        {/* Footer eliminado para pantalla de verificación */}
+>>>>>>> 608db6c74894ce726648d2d64f95bcbd6c269349
       </div>
     </div>
   );
