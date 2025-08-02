@@ -43,6 +43,13 @@ export default function HomePage() {
     checkSetupStatus();
   }, []);
 
+  useEffect(() => {
+    if (!isChecking && !needsSetup) {
+      // Redirigir a /login si todo está validado
+      router.replace('/login');
+    }
+  }, [isChecking, needsSetup, router]);
+
   if (isChecking) {
     return <SystemCheckPage />;
   }
@@ -51,5 +58,6 @@ export default function HomePage() {
     return <SetupWizard />;
   }
 
-  return <LoginPage />;
+  // Mientras redirige, puedes mostrar un loader
+  return <LoadingPage />;
 }

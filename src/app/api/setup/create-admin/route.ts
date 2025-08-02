@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import mongoose from 'mongoose';
+import dbConnect from '../../../../lib/mongodb';
 import fs from 'fs';
 import path from 'path';
 import nodemailer from 'nodemailer';
@@ -21,11 +22,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Crear contenido del archivo .env.local
-    // Asegurar que la URI incluya el nombre de la base de datos "Restaurant"
-    const finalMongoUri = ensureRestaurantDatabase(mongodb.uri);
-
+    // Usar la URI original del usuario para conectar
     const envContent = `# Configuración de Base de Datos
-MONGODB_URI=${finalMongoUri}
+MONGODB_URI=${mongodb.uri}
 
 # Configuración de Email SMTP
 SMTP_EMAIL=${smtp.email}
@@ -40,13 +39,9 @@ NEXTAUTH_URL=http://localhost:3000
     const envPath = path.join(process.cwd(), '.env.local');
     fs.writeFileSync(envPath, envContent);
 
-    // Conectar a MongoDB con la nueva URI
+    // Conectar a MongoDB usando la URI principal (singleton)
     try {
-      const connectionUri = ensureRestaurantDatabase(mongodb.uri);
-      
-      await mongoose.connect(connectionUri, {
-        bufferCommands: false,
-      });
+      await dbConnect();
 
       // Verificar que la conexión esté activa
       const db = mongoose.connection;
@@ -54,10 +49,13 @@ NEXTAUTH_URL=http://localhost:3000
         throw new Error('Conexión no establecida');
       }
 
+      // Usar explícitamente la base 'Restaurant' para las operaciones
+      const restaurantDb = db.useDb('Restaurant');
+      const UserModel = restaurantDb.model('User', User.schema);
+
       // Verificar si ya existe un usuario admin
-      const existingAdmin = await User.findOne({ role: 'admin' });
+      const existingAdmin = await UserModel.findOne({ role: 'admin' });
       if (existingAdmin) {
-        await mongoose.disconnect();
         return NextResponse.json(
           { error: 'Ya existe un usuario administrador' },
           { status: 400 }
@@ -65,9 +63,8 @@ NEXTAUTH_URL=http://localhost:3000
       }
 
       // Verificar si el email ya está en uso
-      const existingUserWithEmail = await User.findOne({ email: email.toLowerCase() });
+      const existingUserWithEmail = await UserModel.findOne({ email: email.toLowerCase() });
       if (existingUserWithEmail) {
-        await mongoose.disconnect();
         return NextResponse.json(
           { error: 'Ya existe un usuario con este correo electrónico' },
           { status: 400 }
@@ -75,9 +72,8 @@ NEXTAUTH_URL=http://localhost:3000
       }
 
       // Verificar si el nombre de usuario ya está en uso
-      const existingUserWithName = await User.findOne({ name: name });
+      const existingUserWithName = await UserModel.findOne({ name: name });
       if (existingUserWithName) {
-        await mongoose.disconnect();
         return NextResponse.json(
           { error: 'Ya existe un usuario con este nombre' },
           { status: 400 }
@@ -93,7 +89,7 @@ NEXTAUTH_URL=http://localhost:3000
       const hashedToken = await bcrypt.hash(verificationToken, salt);
 
       // Crear el usuario administrador con verificación pendiente
-      const adminUser = new User({
+      const adminUser = new UserModel({
         name,
         email,
         password,
@@ -144,8 +140,6 @@ NEXTAUTH_URL=http://localhost:3000
 
       await transporter.sendMail(mailOptions);
 
-      await mongoose.disconnect();
-
       return NextResponse.json({
         success: true,
         message: 'Código de verificación enviado',
@@ -157,7 +151,6 @@ NEXTAUTH_URL=http://localhost:3000
       });
     } catch (connectionError: unknown) {
       console.error('Error de conexión a MongoDB:', connectionError);
-      await mongoose.disconnect();
       const errorMessage = connectionError instanceof Error ? connectionError.message : 'Error de conexión desconocido';
       return NextResponse.json(
         { error: `Error de conexión: ${errorMessage}` },

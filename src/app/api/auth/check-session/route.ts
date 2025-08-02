@@ -37,11 +37,8 @@ export async function GET(request: NextRequest) {
       }
       
       // Conectar a la base de datos
-      const connectionUri = ensureRestaurantDatabase(process.env.MONGODB_URI || '');
-      
-      await mongoose.connect(connectionUri, {
-        bufferCommands: false,
-      });
+      // Usar el helper dbConnect() para manejar la conexión correctamente
+      await import('@/lib/mongodb').then(mod => mod.dbConnect());
 
       // Verificar que la conexión esté activa
       const db = mongoose.connection;
@@ -51,9 +48,7 @@ export async function GET(request: NextRequest) {
 
       // Verificar que el usuario existe y está activo
       const user = await User.findById(decoded.userId).select('-password');
-      
-      await mongoose.disconnect();
-      
+
       if (!user || !user.isActive || !user.emailVerified) {
         return NextResponse.json({ isAuthenticated: false, authenticated: false, error: 'User not found or inactive' }, { status: 401 });
       }
@@ -70,13 +65,11 @@ export async function GET(request: NextRequest) {
       });
 
     } catch (jwtError) {
-      await mongoose.disconnect();
       return NextResponse.json({ isAuthenticated: false, authenticated: false, error: 'Invalid token' }, { status: 401 });
     }
 
   } catch (error) {
     console.error('Error checking session:', error);
-    await mongoose.disconnect();
     return NextResponse.json({ isAuthenticated: false, authenticated: false, error: 'Server error' }, { status: 500 });
   }
 } 

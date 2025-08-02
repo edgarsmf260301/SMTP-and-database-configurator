@@ -1,3 +1,4 @@
+
 import mongoose from 'mongoose';
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/Restaurant';
@@ -11,15 +12,24 @@ if (!MONGODB_URI) {
  * in development. This prevents connections growing exponentially
  * during API Route usage.
  */
+// @ts-ignore
 let cached = global.mongoose;
-
+// @ts-ignore
 if (!cached) {
-  cached = global.mongoose = { conn: null, promise: null };
+  // @ts-ignore
+  cached = global.mongoose = { conn: null, promise: null, uri: null };
 }
 
-async function dbConnect() {
+
+export async function dbConnect(uri?: string) {
+  // Siempre usar la URI principal del entorno
+  const connectionUri = MONGODB_URI;
+  console.log('[dbConnect] URI principal:', connectionUri);
+  console.log('[dbConnect] Estado inicial de conexión:', mongoose.connection.readyState);
+  const CONNECTED = mongoose.ConnectionStates ? mongoose.ConnectionStates.connected : 1;
   // Si ya tenemos una conexión activa, devolverla
-  if (cached.conn && mongoose.connection.readyState === 1) {
+  if (cached.conn && mongoose.connection.readyState === CONNECTED) {
+    console.log('[dbConnect] Reutilizando conexión activa');
     return cached.conn;
   }
 
@@ -27,33 +37,58 @@ async function dbConnect() {
   if (cached.promise) {
     try {
       cached.conn = await cached.promise;
+      console.log('[dbConnect] Esperando promesa de conexión existente');
+      if (mongoose.connection.readyState !== CONNECTED) {
+        console.warn('[dbConnect] Conexión sigue en estado 0 tras promesa, reintentando...');
+        cached.promise = mongoose.connect(connectionUri, {
+          bufferCommands: false,
+          dbName: 'Restaurant',
+        });
+        try {
+          cached.conn = await cached.promise;
+        } catch (e) {
+          cached.promise = null;
+          console.error('[dbConnect] Error al reintentar conexión:', e);
+          throw e;
+        }
+        if (mongoose.connection.readyState !== CONNECTED) {
+          console.error('[dbConnect] Conexión no establecida tras reintento');
+          throw new Error('MongoDB connection not established (reintento)');
+        }
+        console.log('[dbConnect] Conexión establecida correctamente tras reintento');
+      }
       return cached.conn;
     } catch (e) {
       cached.promise = null;
+      console.error('[dbConnect] Error en promesa existente:', e);
       throw e;
     }
   }
 
-  // Crear nueva conexión
+  // Crear nueva conexión solo si no existe
   const opts = {
     bufferCommands: false,
+    dbName: 'Restaurant',
   };
 
-  cached.promise = mongoose.connect(MONGODB_URI, opts);
+  cached.uri = connectionUri;
+  cached.promise = mongoose.connect(connectionUri, opts);
 
   try {
     cached.conn = await cached.promise;
-    
-    // Verificar que la conexión esté establecida
-    if (mongoose.connection.readyState !== 1) {
+    console.log('[dbConnect] Estado después de conectar:', mongoose.connection.readyState);
+    if (mongoose.connection.readyState !== CONNECTED) {
+      console.error('[dbConnect] Conexión no establecida');
       throw new Error('MongoDB connection not established');
     }
+    console.log('[dbConnect] Conexión establecida correctamente');
   } catch (e) {
     cached.promise = null;
+    console.error('[dbConnect] Error al conectar:', e);
     throw e;
   }
 
   return cached.conn;
 }
 
-export default dbConnect; 
+export default dbConnect;

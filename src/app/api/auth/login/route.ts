@@ -15,25 +15,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Conectar a MongoDB
+    // Conectar a MongoDB solo si no hay conexión activa
     const connectionUri = ensureRestaurantDatabase(process.env.MONGODB_URI || '');
-    
     try {
-      await mongoose.connect(connectionUri, {
-        bufferCommands: false,
-      });
-
-      // Verificar que la conexión esté activa
-      const db = mongoose.connection;
-      if (db.readyState !== 1) {
-        throw new Error('Conexión no establecida');
+      if (mongoose.connection.readyState !== 1) {
+        await import('@/lib/mongodb').then(mod => mod.dbConnect(connectionUri));
       }
+      // Usar la base Restaurant explícitamente
+      const db = mongoose.connection.useDb('Restaurant');
+      const UserRestaurant = db.model('User', User.schema);
 
       // Buscar el usuario por nombre de usuario
-      const user = await User.findOne({ name: username });
+      const user = await UserRestaurant.findOne({ name: username });
 
       if (!user) {
-        await mongoose.disconnect();
         return NextResponse.json(
           { error: 'Credenciales inválidas' },
           { status: 401 }
@@ -42,35 +37,33 @@ export async function POST(request: NextRequest) {
 
       // Verificar si el usuario está activo
       if (!user.isActive) {
-        await mongoose.disconnect();
         return NextResponse.json(
           { error: 'Tu cuenta ha sido desactivada' },
           { status: 401 }
         );
       }
 
-    // Verificar la contraseña
-    const isPasswordValid = await user.comparePassword(password);
+      // Verificar la contraseña
+      const isPasswordValid = typeof user.comparePassword === 'function' ? await user.comparePassword(password) : false;
 
       if (!isPasswordValid) {
-        await mongoose.disconnect();
         return NextResponse.json(
           { error: 'Credenciales inválidas' },
           { status: 401 }
         );
       }
 
-    // Generar token JWT
-    const token = generateJWTToken(
-      {
-        userId: user._id,
-        email: user.email,
-        role: user.role,
-        name: user.name,
-      },
-      process.env.NEXTAUTH_SECRET || 'fallback-secret',
-      '24h'
-    );
+      // Generar token JWT
+      const token = generateJWTToken(
+        {
+          userId: user._id,
+          email: user.email,
+          role: user.role,
+          name: user.name,
+        },
+        process.env.NEXTAUTH_SECRET || 'fallback-secret',
+        '24h'
+      );
 
       // Crear respuesta con cookie
       const response = NextResponse.json({
@@ -92,12 +85,8 @@ export async function POST(request: NextRequest) {
         maxAge: 24 * 60 * 60, // 24 horas
       });
 
-      await mongoose.disconnect();
-
       return response;
     } catch (connectionError: unknown) {
-      console.error('Error de conexión a MongoDB:', connectionError);
-      await mongoose.disconnect();
       const errorMessage = connectionError instanceof Error ? connectionError.message : 'Error de conexión desconocido';
       return NextResponse.json(
         { error: `Error de conexión: ${errorMessage}` },

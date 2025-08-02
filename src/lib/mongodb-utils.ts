@@ -3,34 +3,21 @@
  */
 
 /**
- * Asegura que la URI de MongoDB incluya el nombre de la base de datos "Restaurant"
+ * Asegura que la URI de MongoDB incluya el nombre de la base de datos configurada
  * @param uri - URI de MongoDB original
- * @returns URI con el nombre de la base de datos "Restaurant"
+ * @returns URI con el nombre de la base de datos configurada
  */
+
 export function ensureRestaurantDatabase(uri: string): string {
-  // Si ya contiene Restaurant, devolver la URI original
-  if (uri.includes('/Restaurant') || uri.includes('/restaurant')) {
-    return uri;
+  // Elimina cualquier base de datos al final de la URI y fuerza /Restaurant antes de los parámetros de query
+  let cleanUri = uri.replace(/(mongodb(?:\+srv)?:\/\/[^/]+)(?:\/[^?]*)?/, '$1/Restaurant');
+  // Si no tiene /Restaurant, agrégalo
+  if (!cleanUri.match(/\/Restaurant(\b|$)/)) {
+    const [base, params] = cleanUri.split('?');
+    cleanUri = base.endsWith('/') ? base + 'Restaurant' : base + '/Restaurant';
+    if (params) cleanUri += '?' + params;
   }
-
-  // Separar la URI base de los parámetros de consulta
-  const urlParts = uri.split('?');
-  const baseUri = urlParts[0];
-  const queryParams = urlParts.length > 1 ? `?${urlParts.slice(1).join('?')}` : '';
-
-  // Determinar si necesitamos agregar / antes de Restaurant
-  let finalBaseUri: string;
-  
-  if (baseUri.endsWith('/')) {
-    // Si termina con /, solo agregar Restaurant
-    finalBaseUri = `${baseUri}Restaurant`;
-  } else {
-    // Si no termina con /, agregar /Restaurant
-    finalBaseUri = `${baseUri}/Restaurant`;
-  }
-
-  // Reconstruir la URI completa con los parámetros de consulta
-  return `${finalBaseUri}${queryParams}`;
+  return cleanUri;
 }
 
 /**

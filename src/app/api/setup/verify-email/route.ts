@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import mongoose from 'mongoose';
+import { dbConnect } from '../../../../lib/mongodb';
 import User from '@/models/User';
 import { ensureRestaurantDatabase } from '@/lib/mongodb-utils';
 import { compareVerificationToken } from '@/lib/token-utils';
@@ -16,18 +17,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Conectar a MongoDB
+    // Conectar a MongoDB solo si no hay conexión activa
     try {
-      const connectionUri = ensureRestaurantDatabase(mongodb.uri);
-      
-      await mongoose.connect(connectionUri, {
-        bufferCommands: false,
-      });
+      let connectionUri = mongodb.uri;
+      // Solo conectar si no hay conexión activa
+      if (mongoose.connection.readyState !== 1) {
+        await dbConnect(connectionUri);
+      }
+      // Usar la base Restaurant explícitamente
+      const db = mongoose.connection.useDb('Restaurant');
+      // Usar el modelo User en la base Restaurant
+      const UserRestaurant = db.model('User', User.schema);
 
       // Buscar el usuario por email
-      const user = await User.findOne({ email });
+      const user = await UserRestaurant.findOne({ email });
       if (!user) {
-        await mongoose.disconnect();
         return NextResponse.json(
           { error: 'Usuario no encontrado' },
           { status: 404 }
@@ -36,18 +40,15 @@ export async function POST(request: NextRequest) {
 
       // Verificar si el token coincide y no ha expirado
       let isTokenValid = false;
-      
       try {
-        // Usar función de utilidad directamente para mayor confiabilidad
-        isTokenValid = await compareVerificationToken(token, user.verificationToken || '');
+        isTokenValid = await compareVerificationToken(token, typeof user.verificationToken === 'string' ? user.verificationToken : '');
         console.log('Verificación de token completada:', isTokenValid);
       } catch (error) {
         console.error('Error al verificar token:', error);
         isTokenValid = false;
       }
-      
+
       if (!isTokenValid) {
-        await mongoose.disconnect();
         return NextResponse.json(
           { error: 'Token de verificación inválido' },
           { status: 400 }
@@ -55,7 +56,6 @@ export async function POST(request: NextRequest) {
       }
 
       if (user.tokenExpires && new Date() > user.tokenExpires) {
-        await mongoose.disconnect();
         return NextResponse.json(
           { error: 'Token de verificación expirado' },
           { status: 400 }
@@ -67,10 +67,9 @@ export async function POST(request: NextRequest) {
       user.isActive = true;
       user.verificationToken = undefined;
       user.tokenExpires = undefined;
-      
       await user.save();
 
-      await mongoose.disconnect();
+      // No desconectar mongoose, para evitar problemas de reconexión
 
       return NextResponse.json({
         success: true,
@@ -83,7 +82,6 @@ export async function POST(request: NextRequest) {
       });
     } catch (connectionError: unknown) {
       console.error('Error de conexión a MongoDB:', connectionError);
-      await mongoose.disconnect();
       const errorMessage = connectionError instanceof Error ? connectionError.message : 'Error de conexión desconocido';
       return NextResponse.json(
         { error: `Error de conexión: ${errorMessage}` },

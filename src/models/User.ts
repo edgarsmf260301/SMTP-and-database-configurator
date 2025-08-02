@@ -95,8 +95,8 @@ userSchema.pre('save', async function (next) {
     try {
       const salt = await bcrypt.genSalt(10);
       this.password = await bcrypt.hash(this.password, salt);
-    } catch (error: unknown) {
-      return next(error);
+    } catch (error) {
+      return next(error as import('mongoose').CallbackError);
     }
   }
 
@@ -153,4 +153,5 @@ if (!UserModel.prototype.compareVerificationToken) {
   };
 }
 
-export default UserModel; 
+export { userSchema };
+export default UserModel;

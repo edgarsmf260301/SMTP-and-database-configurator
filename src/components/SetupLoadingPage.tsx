@@ -141,7 +141,7 @@ export default function SetupLoadingPage({
 
         {/* Footer */}
         <div className="text-center text-xs sm:text-sm text-gray-400">
-          <p>&copy; 2024 Sistema de Restaurante. Todos los derechos reservados.</p>
+          {/* Footer eliminado por requerimiento */}
         </div>
       </div>
     </div>

@@ -11,7 +11,13 @@ function DashboardContent() {
     totalRevenue: 0,
     averageOrderValue: 0,
   });
-  const [recentOrders, setRecentOrders] = useState([]);
+  type Order = {
+    id: number;
+    customer: string;
+    total: number;
+    status: 'ready' | 'preparing' | 'pending';
+  };
+  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
@@ -42,9 +48,15 @@ function DashboardContent() {
     loadDashboardData();
   }, []);
 
-  const handleLogout = () => {
-    // TODO: Implementar logout
-    router.push('/');
+  const handleLogout = async () => {
+    // Llamar al endpoint de logout para limpiar la sesión
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
+    // Redirigir y reemplazar el historial para evitar volver atrás
+    router.replace('/login');
   };
 
   if (isLoading) {
@@ -152,7 +164,7 @@ function DashboardContent() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {recentOrders.map((order: unknown) => (
+                {recentOrders.map((order) => (
                   <tr key={order.id}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {order.customer}

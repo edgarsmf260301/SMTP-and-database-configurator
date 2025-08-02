@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import fs from 'fs';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, easeInOut, easeOut, easeIn } from 'framer-motion';
 
 // Esquemas de validación
 const mongodbSchema = z.object({
@@ -27,7 +28,7 @@ const adminSchema = z.object({
   path: ["confirmPassword"],
 });
 
-type Step = 'welcome' | 'mongodb' | 'smtp' | 'admin' | 'complete';
+type Step = 'welcome' | 'mongodb' | 'smtp' | 'admin' | 'complete' | 'checking';
 
 interface SetupData {
   mongodb: { uri: string };
@@ -36,10 +37,50 @@ interface SetupData {
 }
 
 export default function SetupWizard() {
-  const [currentStep, setCurrentStep] = useState<Step>('welcome');
+  // Detectar si existe .env.local y cargar sus valores
+  const [currentStep, setCurrentStep] = useState<Step>('checking');
+  useEffect(() => {
+    let mounted = true;
+    async function checkEnvLocal() {
+      try {
+        const res = await fetch('/api/setup/check-env', { method: 'GET' });
+        if (res.ok) {
+          const env = await res.json();
+          if (env.mongodb && env.smtp) {
+            setSetupData({
+              mongodb: { uri: env.mongodb },
+              smtp: { email: env.smtp.email, password: env.smtp.password },
+              admin: { name: '', email: '', password: '' },
+            });
+            // Verificar si existe usuario admin y base de datos
+            const checkRes = await fetch('/api/setup/test-mongodb', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ uri: env.mongodb }),
+            });
+            const checkData = await checkRes.json();
+            if (checkData.success && checkData.adminExists) {
+              // Si todo está correcto, redirigir al login inmediatamente desde la pantalla de carga
+              window.location.replace('/login');
+              return;
+            }
+            // Si no existe admin, saltar directamente al paso de creación de admin
+            if (mounted) setCurrentStep('admin');
+            return;
+          }
+        }
+        if (mounted) setCurrentStep('welcome');
+      } catch {
+        if (mounted) setCurrentStep('welcome');
+      }
+    }
+    checkEnvLocal();
+    return () => { mounted = false; };
+  }, []);
   const [direction, setDirection] = useState(0); // Para controlar la dirección de la animación
 
   // Variantes de animación para las transiciones
+
   const pageVariants = {
     initial: (direction: number) => ({
       x: direction > 0 ? 300 : -300,
@@ -52,7 +93,7 @@ export default function SetupWizard() {
       scale: 1,
       transition: {
         duration: 0.5,
-        ease: [0.4, 0.0, 0.2, 1], // Curva de ease personalizada
+        ease: easeInOut,
         staggerChildren: 0.1,
       },
     },
@@ -62,7 +103,7 @@ export default function SetupWizard() {
       scale: 0.95,
       transition: {
         duration: 0.3,
-        ease: [0.4, 0.0, 0.2, 1],
+        ease: easeOut,
       },
     }),
   };
@@ -74,7 +115,7 @@ export default function SetupWizard() {
       y: 0,
       transition: {
         duration: 0.4,
-        ease: [0.4, 0.0, 0.2, 1],
+        ease: easeInOut,
       }
     },
     exit: { 
@@ -82,6 +123,7 @@ export default function SetupWizard() {
       y: -20,
       transition: {
         duration: 0.2,
+        ease: easeIn,
       }
     },
   };
@@ -92,7 +134,6 @@ export default function SetupWizard() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  
   // Estados para verificación de email
   const [verificationToken, setVerificationToken] = useState('');
   const [tokenSent, setTokenSent] = useState(false);
@@ -100,7 +141,35 @@ export default function SetupWizard() {
   const [resendAttempts, setResendAttempts] = useState(0);
   const [resendCooldown, setResendCooldown] = useState<Date | null>(null);
   const [timeLeft, setTimeLeft] = useState(0);
+  const [adminExists, setAdminExists] = useState<'checking' | 'exists' | 'not-exists'>('checking');
   const router = useRouter();
+
+  // Verificar si existe usuario admin al entrar al paso 'admin' usando la URI original
+  useEffect(() => {
+    if (currentStep === 'admin') {
+      setAdminExists('checking');
+      setIsLoading(true);
+      setError('');
+      fetch('/api/setup/test-mongodb', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uri: setupData.mongodb.uri }),
+      })
+        .then(async res => {
+          const data = await res.json();
+          if (data.adminExists) {
+            setAdminExists('exists');
+          } else {
+            setAdminExists('not-exists');
+          }
+        })
+        .catch(() => {
+          setError('Error verificando usuario administrador');
+          setAdminExists('not-exists');
+        })
+        .finally(() => setIsLoading(false));
+    }
+  }, [currentStep, setupData.mongodb]);
 
   // Timer para actualizar el tiempo restante del token
   useEffect(() => {
@@ -285,15 +354,14 @@ export default function SetupWizard() {
   const handleAdminSubmit = async (data: { name: string; email: string; password: string }) => {
     setIsLoading(true);
     setError('');
-    
     try {
-      // Primero crear el usuario y enviar token de verificación
+      // Enviar la URI original del usuario, el backend se encarga de seleccionar la base Restaurant
       const response = await fetch('/api/setup/create-admin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...data,
-          mongodb: setupData.mongodb,
+          mongodb: { uri: setupData.mongodb.uri },
           smtp: setupData.smtp,
         }),
       });
@@ -304,7 +372,6 @@ export default function SetupWizard() {
       }
 
       const result = await response.json();
-      
       if (result.success) {
         setSetupData(prev => ({ ...prev, admin: data }));
         setTokenSent(true);
@@ -322,6 +389,45 @@ export default function SetupWizard() {
   };
 
   const renderStep = () => {
+    if (currentStep === 'checking') {
+      // Loader global para verificación inicial
+      return (
+        <motion.div
+          className="flex flex-col items-center justify-center py-16 min-h-[400px]"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, ease: easeInOut }}
+        >
+          <motion.div
+            className="w-24 h-24 mb-8 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-700 shadow-2xl animate-pulse"
+            initial={{ scale: 0.9, opacity: 0.7 }}
+            animate={{ scale: [0.9, 1.08, 0.95, 1], opacity: [0.7, 1, 0.8, 1] }}
+            transition={{ duration: 1.2, repeat: Infinity }}
+          >
+            <svg className="w-14 h-14 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" strokeWidth="2.5" stroke="currentColor" fill="none" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8v4l3 3" />
+            </svg>
+          </motion.div>
+          <motion.h2
+            className="text-2xl sm:text-3xl font-bold text-blue-300 mb-2"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
+            Verificando configuración inicial...
+          </motion.h2>
+          <motion.p
+            className="text-base text-gray-400 text-center"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+          >
+            Por favor espera unos segundos mientras verificamos tu archivo de entorno y la base de datos.
+          </motion.p>
+        </motion.div>
+      );
+    }
     switch (currentStep) {
       case 'welcome':
         return (
@@ -544,182 +650,363 @@ export default function SetupWizard() {
         );
 
       case 'admin':
-        const canResend = resendAttempts < 1 || (resendCooldown && new Date() > resendCooldown);
+        // Solo permitir reenviar token cuando el tiempo haya expirado
+        const canResend = timeLeft === 0 && (resendAttempts < 1 || (resendCooldown && new Date() > resendCooldown));
         const cooldownLeft = resendCooldown ? Math.max(0, Math.floor((resendCooldown.getTime() - Date.now()) / 1000)) : 0;
-        
-        return (
-          <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
-            <div className="text-center">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center mb-3 sm:mb-4 shadow-lg">
-                <svg className="w-6 h-6 sm:w-8 sm:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+
+        // Loader con icono y animación mejorada
+        if (adminExists === 'checking') {
+          return (
+            <motion.div
+              className="flex flex-col items-center justify-center py-10"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, ease: easeInOut }}
+            >
+              <motion.div
+                className="w-16 h-16 mb-6 flex items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-purple-700 shadow-xl animate-pulse"
+                initial={{ scale: 0.9, opacity: 0.7 }}
+                animate={{ scale: [0.9, 1.05, 0.95, 1], opacity: [0.7, 1, 0.8, 1] }}
+                transition={{ duration: 1.2, repeat: Infinity }}
+              >
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="10" strokeWidth="2" stroke="currentColor" fill="none" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3" />
                 </svg>
+              </motion.div>
+              <motion.p
+                className="text-lg sm:text-xl text-purple-300 font-semibold mb-2"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+              >
+                Verificando si existe usuario administrador...
+              </motion.p>
+              <motion.p
+                className="text-sm text-gray-400"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+              >
+                Por favor espera unos segundos mientras verificamos la base de datos.
+              </motion.p>
+            </motion.div>
+          );
+        }
+
+        // Mensaje admin existe con icono y diseño destacado
+        if (adminExists === 'exists') {
+          const handleCompleteWithEnv = async () => {
+            setIsLoading(true);
+            setError('');
+            try {
+              // Llama al endpoint para crear el .env.local con formato de env.example
+              const response = await fetch('/api/setup/generate-env', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  mongodb: setupData.mongodb,
+                  smtp: setupData.smtp,
+                  format: 'example',
+                }),
+              });
+              if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Error al generar archivo de entorno');
+              }
+              goToNextStep('complete');
+            } catch (err: unknown) {
+              const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
+              setError(errorMessage);
+            } finally {
+              setIsLoading(false);
+            }
+          };
+          return (
+            <motion.div
+              className="flex flex-col items-center justify-center py-10"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, ease: easeInOut }}
+            >
+              <motion.div
+                className="w-16 h-16 mb-6 flex items-center justify-center rounded-full bg-gradient-to-br from-green-500 to-blue-500 shadow-xl animate-pulse"
+                initial={{ scale: 0.9, opacity: 0.7 }}
+                animate={{ scale: [0.9, 1.05, 0.95, 1], opacity: [0.7, 1, 0.8, 1] }}
+                transition={{ duration: 1.2, repeat: Infinity }}
+              >
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                </svg>
+              </motion.div>
+              <motion.p
+                className="text-lg sm:text-xl text-green-300 font-semibold mb-2"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+              >
+                Usuario administrador ya existe.
+              </motion.p>
+              <motion.p
+                className="text-sm text-gray-400 mb-4"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+              >
+                Puedes continuar con la configuración o iniciar sesión con tu cuenta de administrador.
+              </motion.p>
+              {error && (
+                <div className="bg-red-900/50 border border-red-500/30 rounded-lg p-3 mb-2">
+                  <p className="text-red-300 text-xs sm:text-sm">{error}</p>
+                </div>
+              )}
+              <motion.button
+                onClick={handleCompleteWithEnv}
+                disabled={isLoading}
+                className="mt-2 bg-gradient-to-r from-green-500 to-blue-500 text-white px-6 sm:px-8 py-3 rounded-lg font-semibold hover:from-green-600 hover:to-blue-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base disabled:opacity-50"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+              >
+                {isLoading ? 'Guardando configuración...' : 'Ir al siguiente paso'}
+              </motion.button>
+            </motion.div>
+          );
+        }
+
+        // Formulario de creación admin con icono y diseño destacado
+        if (adminExists === 'not-exists' && !tokenSent) {
+          return (
+            <motion.form
+              onSubmit={adminForm.handleSubmit(handleAdminSubmit)}
+              className="space-y-4 max-w-xl mx-auto bg-gray-800 rounded-2xl shadow-2xl border border-purple-700 p-8 sm:p-12 flex flex-col items-center"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: easeInOut }}
+            >
+              <motion.div
+                className="w-16 h-16 mx-auto mb-6 flex items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-purple-700 shadow-xl animate-pulse"
+                initial={{ scale: 0.9, opacity: 0.7 }}
+                animate={{ scale: [0.9, 1.05, 0.95, 1], opacity: [0.7, 1, 0.8, 1] }}
+                transition={{ duration: 1.2, repeat: Infinity }}
+              >
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <circle cx="12" cy="10" r="7" strokeWidth="2.5" stroke="currentColor" fill="none" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 17c-4 0-7 2-7 4v1a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-1c0-2-3-4-7-4z" />
+                </svg>
+              </motion.div>
+              <motion.h2
+                className="text-2xl sm:text-3xl font-bold text-purple-300 text-center mb-2"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+              >
+                Crear Usuario Administrador
+              </motion.h2>
+              <motion.p
+                className="text-base text-gray-400 text-center mb-6"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+              >
+                Ingresa los datos para crear tu cuenta de administrador.
+              </motion.p>
+              <div className="w-full">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Nombre de Usuario
+                </label>
+                <input
+                  {...adminForm.register('name')}
+                  type="text"
+                  placeholder="Tu nombre de usuario"
+                  className="w-full px-4 py-3 border border-purple-500 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-900 text-white placeholder-gray-400 text-base"
+                />
+                {adminForm.formState.errors.name && (
+                  <p className="text-red-400 text-xs sm:text-sm mt-1">{adminForm.formState.errors.name.message}</p>
+                )}
               </div>
-              <h2 className="text-xl sm:text-2xl font-bold text-white">Usuario Administrador</h2>
-              <p className="text-sm sm:text-base text-gray-300">
-                {tokenSent ? 'Verifica tu email para completar la configuración' : 'Crea tu cuenta de administrador principal'}
-              </p>
-            </div>
+              <div className="w-full">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Correo Electrónico
+                </label>
+                <input
+                  {...adminForm.register('email')}
+                  type="email"
+                  placeholder="admin@restaurante.com"
+                  className="w-full px-4 py-3 border border-purple-500 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-900 text-white placeholder-gray-400 text-base"
+                />
+                {adminForm.formState.errors.email && (
+                  <p className="text-red-400 text-xs sm:text-sm mt-1">{adminForm.formState.errors.email.message}</p>
+                )}
+              </div>
+              <div className="w-full">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Contraseña
+                </label>
+                <input
+                  {...adminForm.register('password')}
+                  type="password"
+                  placeholder="••••••••"
+                  className="w-full px-4 py-3 border border-purple-500 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-900 text-white placeholder-gray-400 text-base"
+                />
+                {adminForm.formState.errors.password && (
+                  <p className="text-red-400 text-xs sm:text-sm mt-1">{adminForm.formState.errors.password.message}</p>
+                )}
+              </div>
+              <div className="w-full">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Confirmar Contraseña
+                </label>
+                <input
+                  {...adminForm.register('confirmPassword')}
+                  type="password"
+                  placeholder="••••••••"
+                  className="w-full px-4 py-3 border border-purple-500 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-900 text-white placeholder-gray-400 text-base"
+                />
+                {adminForm.formState.errors.confirmPassword && (
+                  <p className="text-red-400 text-xs sm:text-sm mt-1">{adminForm.formState.errors.confirmPassword.message}</p>
+                )}
+              </div>
+              {error && (
+                <div className="bg-red-900/50 border border-red-500/30 rounded-lg p-3">
+                  <p className="text-red-300 text-xs sm:text-sm">{error}</p>
+                </div>
+              )}
+              <div className="flex flex-col sm:flex-row justify-between space-y-3 sm:space-y-0 mt-6 w-full">
+                <motion.button
+                  type="button"
+                  onClick={() => goToPreviousStep('smtp')}
+                  className="px-6 py-2 text-gray-400 hover:text-white transition-colors text-base font-semibold rounded-lg"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  Atrás
+                </motion.button>
+                <motion.button
+                  type="submit"
+                  disabled={isLoading}
+                  className="bg-gradient-to-r from-purple-600 to-purple-700 text-white px-6 py-2 rounded-lg font-semibold hover:from-purple-700 hover:to-purple-800 disabled:opacity-50 transition-all duration-200 shadow-lg text-base"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {isLoading ? 'Creando...' : 'Crear Usuario Admin'}
+                </motion.button>
+              </div>
+            </motion.form>
+          );
+        }
 
-            {!tokenSent ? (
-              // Formulario de creación de usuario
-              <form onSubmit={adminForm.handleSubmit(handleAdminSubmit)} className="space-y-4">
+        // Formulario de verificación con icono y diseño destacado
+        if (adminExists === 'not-exists' && tokenSent) {
+          return (
+            <motion.div
+              className="max-w-lg mx-auto bg-gray-800 rounded-xl shadow-2xl border border-blue-700 p-6 sm:p-8 flex flex-col items-center"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: easeInOut }}
+            >
+              <motion.div
+                className="w-16 h-16 mb-6 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-700 shadow-xl animate-pulse"
+                initial={{ scale: 0.9, opacity: 0.7 }}
+                animate={{ scale: [0.9, 1.05, 0.95, 1], opacity: [0.7, 1, 0.8, 1] }}
+                transition={{ duration: 1.2, repeat: Infinity }}
+              >
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m0 4h.01" />
+                </svg>
+              </motion.div>
+              <motion.h2
+                className="text-xl sm:text-2xl font-bold text-blue-300 text-center mb-2"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+              >
+                Verifica tu Email
+              </motion.h2>
+              <motion.p
+                className="text-sm text-gray-400 text-center mb-4"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+              >
+                Se ha enviado un token de verificación a <span className="text-blue-400 font-medium">{setupData.admin.email}</span>. Revisa tu bandeja de entrada y carpeta de spam. El token expira en <span className="text-blue-400 font-semibold">{timeLeft} segundos</span>.
+              </motion.p>
+              <motion.form
+                onSubmit={(e) => { e.preventDefault(); handleVerifyEmail(verificationToken); }}
+                className="space-y-4 w-full"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.6 }}
+              >
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Nombre de Usuario
+                    Token de Verificación
                   </label>
                   <input
-                    {...adminForm.register('name')}
                     type="text"
-                    placeholder="Tu nombre de usuario"
-                    className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-700 text-white placeholder-gray-400 text-sm sm:text-base"
+                    value={verificationToken}
+                    onChange={(e) => setVerificationToken(e.target.value)}
+                    placeholder="Ingresa el token de 6 dígitos"
+                    className="w-full px-4 py-3 border border-blue-500 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-900 text-white placeholder-gray-400 text-base text-center tracking-widest"
+                    maxLength={6}
                   />
-                  {adminForm.formState.errors.name && (
-                    <p className="text-red-400 text-xs sm:text-sm mt-1">{adminForm.formState.errors.name.message}</p>
-                  )}
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Correo Electrónico
-                  </label>
-                  <input
-                    {...adminForm.register('email')}
-                    type="email"
-                    placeholder="admin@restaurante.com"
-                    className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-700 text-white placeholder-gray-400 text-sm sm:text-base"
-                  />
-                  {adminForm.formState.errors.email && (
-                    <p className="text-red-400 text-xs sm:text-sm mt-1">{adminForm.formState.errors.email.message}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Contraseña
-                  </label>
-                  <input
-                    {...adminForm.register('password')}
-                    type="password"
-                    placeholder="••••••••"
-                    className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-700 text-white placeholder-gray-400 text-sm sm:text-base"
-                  />
-                  {adminForm.formState.errors.password && (
-                    <p className="text-red-400 text-xs sm:text-sm mt-1">{adminForm.formState.errors.password.message}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Confirmar Contraseña
-                  </label>
-                  <input
-                    {...adminForm.register('confirmPassword')}
-                    type="password"
-                    placeholder="••••••••"
-                    className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-700 text-white placeholder-gray-400 text-sm sm:text-base"
-                  />
-                  {adminForm.formState.errors.confirmPassword && (
-                    <p className="text-red-400 text-xs sm:text-sm mt-1">{adminForm.formState.errors.confirmPassword.message}</p>
-                  )}
-                </div>
-
                 {error && (
                   <div className="bg-red-900/50 border border-red-500/30 rounded-lg p-3">
                     <p className="text-red-300 text-xs sm:text-sm">{error}</p>
                   </div>
                 )}
-
-                <div className="flex flex-col sm:flex-row justify-between space-y-3 sm:space-y-0">
-                                  <button
-                  type="button"
-                  onClick={() => goToPreviousStep('smtp')}
-                  className="px-4 sm:px-6 py-2 text-gray-400 hover:text-white transition-colors text-sm sm:text-base"
-                >
-                  Atrás
-                </button>
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="bg-gradient-to-r from-purple-600 to-purple-700 text-white px-4 sm:px-6 py-2 rounded-lg hover:from-purple-700 hover:to-purple-800 disabled:opacity-50 transition-all duration-200 shadow-lg text-sm sm:text-base"
+                <div className="flex flex-col sm:flex-row justify-between space-y-3 sm:space-y-0 mt-4">
+                  <motion.button
+                    type="button"
+                    onClick={() => {
+                      setTokenSent(false);
+                      setVerificationToken('');
+                      setError('');
+                    }}
+                    className="px-6 py-2 text-gray-400 hover:text-white transition-colors text-base font-semibold rounded-lg"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    transition={{ duration: 0.2 }}
                   >
-                    {isLoading ? 'Creando...' : 'Crear Usuario Admin'}
-                  </button>
-                </div>
-              </form>
-            ) : (
-              // Formulario de verificación de email
-              <>
-                <div className="bg-gray-700 border border-blue-500/30 rounded-lg p-3 sm:p-4">
-                  <h3 className="font-semibold text-blue-400 mb-2 text-sm sm:text-base">📧 Instrucciones:</h3>
-                  <ul className="text-gray-300 text-xs sm:text-sm space-y-1">
-                    <li>• Se ha enviado un token de verificación a <span className="text-blue-400 font-medium">{setupData.admin.email}</span></li>
-                    <li>• Revisa tu bandeja de entrada y carpeta de spam</li>
-                    <li>• El token expira en {timeLeft} segundos</li>
-                    <li>• Puedes reenviar el token una vez más si es necesario</li>
-                    <li>• Después del segundo intento, deberás esperar 5 minutos</li>
-                  </ul>
-                </div>
-
-                <form onSubmit={(e) => { e.preventDefault(); handleVerifyEmail(verificationToken); }} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Token de Verificación
-                    </label>
-                    <input
-                      type="text"
-                      value={verificationToken}
-                      onChange={(e) => setVerificationToken(e.target.value)}
-                      placeholder="Ingresa el token de 6 dígitos"
-                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-700 text-white placeholder-gray-400 text-sm sm:text-base text-center tracking-widest"
-                      maxLength={6}
-                    />
-                  </div>
-
-                  {error && (
-                    <div className="bg-red-900/50 border border-red-500/30 rounded-lg p-3">
-                      <p className="text-red-300 text-xs sm:text-sm">{error}</p>
-                    </div>
-                  )}
-
-                  <div className="flex flex-col sm:flex-row justify-between space-y-3 sm:space-y-0">
-                    <button
+                    Atrás
+                  </motion.button>
+                  <div className="flex space-x-3">
+                    <motion.button
                       type="button"
-                      onClick={() => {
-                        setTokenSent(false);
-                        setVerificationToken('');
-                        setError('');
-                      }}
-                      className="px-4 sm:px-6 py-2 text-gray-400 hover:text-white transition-colors text-sm sm:text-base"
+                      onClick={handleResendToken}
+                      disabled={!canResend || isLoading}
+                      className="px-6 py-2 bg-gray-700 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-all duration-200 text-base font-semibold"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      transition={{ duration: 0.2 }}
                     >
-                      Atrás
-                    </button>
-                    <div className="flex space-x-3">
-                      <button
-                        type="button"
-                        onClick={handleResendToken}
-                        disabled={!canResend || isLoading}
-                        className="px-4 sm:px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 transition-all duration-200 text-sm sm:text-base"
-                      >
-                        {!canResend && cooldownLeft > 0 
-                          ? `Esperar ${Math.floor(cooldownLeft / 60)}:${(cooldownLeft % 60).toString().padStart(2, '0')}`
-                          : 'Reenviar Token'
-                        }
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={isLoading || verificationToken.length !== 6}
-                        className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 sm:px-6 py-2 rounded-lg hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 transition-all duration-200 shadow-lg text-sm sm:text-base"
-                      >
-                        {isLoading ? 'Verificando...' : 'Verificar Email'}
-                      </button>
-                    </div>
+                      {!canResend && cooldownLeft > 0 
+                        ? `Esperar ${Math.floor(cooldownLeft / 60)}:${(cooldownLeft % 60).toString().padStart(2, '0')}`
+                        : 'Reenviar Token'
+                      }
+                    </motion.button>
+                    <motion.button
+                      type="submit"
+                      disabled={isLoading || verificationToken.length !== 6}
+                      className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-2 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 transition-all duration-200 shadow-lg text-base"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      {isLoading ? 'Verificando...' : 'Verificar Email'}
+                    </motion.button>
                   </div>
-                </form>
-              </>
-            )}
-          </div>
-        );
+                </div>
+              </motion.form>
+            </motion.div>
+          );
+        }
+
+        return null;
 
 
 
@@ -741,7 +1028,7 @@ export default function SetupWizard() {
                 <li>• Conexión a MongoDB establecida</li>
                 <li>• Configuración SMTP verificada</li>
                 <li>• Usuario administrador creado</li>
-                <li>• Base de datos Restaurant_System inicializada</li>
+                <li>• Base de datos Restaurant inicializada</li>
               </ul>
             </div>
             <button
@@ -758,6 +1045,52 @@ export default function SetupWizard() {
     }
   };
 
+  if (currentStep === 'checking') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center">
+        <motion.div
+          className="flex flex-col items-center justify-center py-16 min-h-[400px]"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, ease: easeInOut }}
+        >
+          <motion.div
+            className="w-24 h-24 mb-8 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-700 shadow-2xl animate-pulse"
+            initial={{ scale: 0.9, opacity: 0.7 }}
+            animate={{ scale: [0.9, 1.08, 0.95, 1], opacity: [0.7, 1, 0.8, 1] }}
+            transition={{ duration: 1.2, repeat: Infinity }}
+          >
+            <svg className="w-14 h-14 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" strokeWidth="2.5" stroke="currentColor" fill="none" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8v4l3 3" />
+            </svg>
+          </motion.div>
+          <motion.h2
+            className="text-2xl sm:text-3xl font-bold text-blue-300 mb-2"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
+            Verificando sistema...
+          </motion.h2>
+          <motion.p
+            className="text-base text-gray-400 text-center"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+          >
+            Comprobando configuración y estado del sistema
+          </motion.p>
+          <motion.ul className="mt-6 space-y-2 text-left">
+            <motion.li className="text-blue-400 text-sm font-medium">Verificando archivos de configuración</motion.li>
+            <motion.li className="text-blue-400 text-sm font-medium">Comprobando conexión a base de datos</motion.li>
+            <motion.li className="text-gray-400 text-sm font-medium">Validando usuario administrador</motion.li>
+          </motion.ul>
+        </motion.div>
+      </div>
+    );
+  }
+  // Si no está en 'checking', renderizar el wizard normal
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
@@ -772,7 +1105,6 @@ export default function SetupWizard() {
             Configuración de Sistema
           </h1>
         </motion.div>
-
         {/* Progress Steps */}
         <motion.div 
           className="max-w-5xl mx-auto mb-8 sm:mb-12"
@@ -785,7 +1117,6 @@ export default function SetupWizard() {
               const isActive = currentStep === step.id;
               const isCompleted = index < steps.findIndex(s => s.id === currentStep);
               const isFuture = index > steps.findIndex(s => s.id === currentStep);
-              
               return (
                 <motion.div 
                   key={step.id} 
@@ -806,7 +1137,6 @@ export default function SetupWizard() {
                       {step.title}
                     </p>
                   </div>
-                  
                   {/* Step circle with enhanced animations */}
                   <motion.div 
                     className={`relative flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-full border-2 transition-all duration-500 ease-out transform ${
@@ -820,22 +1150,18 @@ export default function SetupWizard() {
                     whileTap={{ scale: 0.95 }}
                     transition={{ duration: 0.2 }}
                   >
-                    
                     {/* Active step glow effect */}
                     {isActive && (
                       <div className="absolute inset-0 rounded-full bg-gradient-step-active opacity-20 animate-ping"></div>
                     )}
-                    
                     {/* Completed step glow effect */}
                     {isCompleted && (
                       <div className="absolute inset-0 rounded-full bg-gradient-step-completed opacity-10 animate-pulse"></div>
                     )}
-                    
                     {/* Ripple effect for active step */}
                     {isActive && (
                       <div className="absolute inset-0 rounded-full bg-gradient-step-active opacity-30 animate-ripple"></div>
                     )}
-                    
                     {/* Icon or number with smooth transitions */}
                     <div className="relative z-10 transition-all duration-300">
                       {isCompleted ? (
@@ -858,7 +1184,6 @@ export default function SetupWizard() {
             })}
           </div>
         </motion.div>
-
         {/* Main Content */}
         <div className="max-w-4xl mx-auto">
           <motion.div 
@@ -882,6 +1207,20 @@ export default function SetupWizard() {
             </AnimatePresence>
           </motion.div>
         </div>
+        {/* Footer solo en bienvenida y finalizado */}
+        {(currentStep === 'welcome' || currentStep === 'complete') && (
+          <footer className="mt-10 text-center text-gray-400 text-xs sm:text-sm">
+            © 2025 Sistema de Restaurante{' '}
+            <a
+              href="https://my-portfolio-lime-zeta-70.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-orange-400 hover:underline font-semibold"
+            >
+              Edgar Martinez - Desarrollador Web
+            </a>
+          </footer>
+        )}
       </div>
     </div>
   );
