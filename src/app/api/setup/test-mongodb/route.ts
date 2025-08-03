@@ -21,35 +21,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Intentar conectar a MongoDB y verificar admin
+    // Intentar conectar a MongoDB y verificar admin usando createConnection
+    const connectionUri = ensureRestaurantDatabase(uri);
+    let testConn: mongoose.Connection | null = null;
     try {
-      const connectionUri = ensureRestaurantDatabase(uri);
-      if (mongoose.connection.readyState !== 1) {
-        await import('@/lib/mongodb').then(mod => mod.dbConnect(connectionUri));
-      }
-      // Usar la base Restaurant explícitamente
-      const db = mongoose.connection.useDb('Restaurant');
+      testConn = await mongoose.createConnection(connectionUri, {
+        dbName: 'Restaurant',
+        serverSelectionTimeoutMS: 5000,
+      }).asPromise();
+
       // Probar una operación simple
-      const collections = await db.db?.listCollections().toArray();
+      const collections = await testConn.db?.listCollections().toArray();
 
       // Buscar usuario admin activo en la colección users
       let adminExists = false;
       try {
-        // Importar el esquema del modelo User
         const { userSchema } = await import('@/models/User');
-        // Usar el modelo User en la base configurada, evitando duplicados
         let UserModel: mongoose.Model<any>;
-        if (db.models.User) {
-          UserModel = db.models.User as mongoose.Model<any>;
+        if (testConn.models.User) {
+          UserModel = testConn.models.User as mongoose.Model<any>;
         } else {
-          UserModel = db.model('User', userSchema) as mongoose.Model<any>;
+          UserModel = testConn.model('User', userSchema) as mongoose.Model<any>;
         }
-        // Buscar usuario admin activo
         const admin = await UserModel.findOne({ role: 'admin', isActive: true }).exec();
         adminExists = !!admin;
-      } catch (adminError) {
+      } catch {
         adminExists = false;
       }
+
+      await testConn.close();
 
       return NextResponse.json({
         success: true,
@@ -58,8 +58,12 @@ export async function POST(request: NextRequest) {
         adminExists
       });
     } catch (connectionError: unknown) {
+      if (testConn) await testConn.close();
       const errorMessage = connectionError instanceof Error ? connectionError.message : 'Error de conexión desconocido';
-      throw new Error(`Error de conexión: ${errorMessage}`);
+      return NextResponse.json(
+        { error: `Error de conexión: ${errorMessage}` },
+        { status: 500 }
+      );
     }
   } catch (error: unknown) {
     console.error('Error testing MongoDB connection:', error);

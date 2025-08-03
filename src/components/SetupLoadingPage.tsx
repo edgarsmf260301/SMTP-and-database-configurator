@@ -141,22 +141,7 @@ export default function SetupLoadingPage({
 
         {/* Footer */}
         <div className="text-center text-xs sm:text-sm text-gray-400">
-<<<<<<< HEAD
           {/* Footer eliminado por requerimiento */}
-=======
-          <p>
-            &copy; 2024 Sistema de Restaurante
-            {' '}|{' '}
-            <a
-              href="https://my-portfolio-lime-zeta-70.vercel.app/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-orange-400 hover:text-orange-300 font-medium transition-colors"
-            >
-              Edgar Martinez - Desarrollador Web
-            </a>
-          </p>
->>>>>>> 608db6c74894ce726648d2d64f95bcbd6c269349
         </div>
       </div>
     </div>

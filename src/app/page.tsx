@@ -17,16 +17,7 @@ export default function HomePage() {
       try {
         // Simular un pequeño delay para mostrar la verificación
         await new Promise(resolve => setTimeout(resolve, 1500));
-
-        // Verificar en localStorage si ya está verificado
-        if (typeof window !== 'undefined') {
-          const verified = localStorage.getItem('setup_verified');
-          if (verified === 'true') {
-            router.replace('/login');
-            return;
-          }
-        }
-
+        
         const response = await fetch('/api/setup/check-status', {
           method: 'GET',
           headers: {
