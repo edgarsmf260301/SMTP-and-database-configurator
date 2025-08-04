@@ -1,4 +1,4 @@
-# 🍽️ Restaurant Viticos System
+# 🍽️ Restaurant System
 
 Sistema de gestión completo para restaurantes desarrollado con Next.js, TypeScript, MongoDB y Tailwind CSS.
 
@@ -148,18 +148,3 @@ Configurado para formateo automático del código.
 ### TypeScript
 Configuración estricta para mejor desarrollo.
 
-## 📞 Soporte
-
-Si necesitas ayuda con la configuración o tienes preguntas:
-
-1. Revisa la documentación en `/src/docs/`
-2. Verifica los logs del servidor
-3. Contacta al equipo de desarrollo
-
-## 📄 Licencia
-
-Este proyecto es propiedad de Restaurant Viticos. Todos los derechos reservados.
-
----
-
-**¡Disfruta gestionando tu restaurante con nuestro sistema! 🍕🍔🍜**

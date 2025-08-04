@@ -1,4 +1,4 @@
-# Restaurant Viticos System
+# Restaurant System
 
 ## Descripción del Proyecto
 
