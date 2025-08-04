@@ -148,3 +148,4 @@ Configurado para formateo automático del código.
 ### TypeScript
 Configuración estricta para mejor desarrollo.
 
+
