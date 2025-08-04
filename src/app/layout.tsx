@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sistema de Restaurante - Viticos",
+  title: "Sistema de restaurante",
   description: "Sistema de gestión completo para restaurantes",
   robots: "noindex, nofollow",
 };
