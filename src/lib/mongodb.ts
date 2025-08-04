@@ -24,12 +24,9 @@ if (!cached) {
 export async function dbConnect(uri?: string) {
   // Siempre usar la URI principal del entorno
   const connectionUri = MONGODB_URI;
-  console.log('[dbConnect] URI principal:', connectionUri);
-  console.log('[dbConnect] Estado inicial de conexión:', mongoose.connection.readyState);
   const CONNECTED = mongoose.ConnectionStates ? mongoose.ConnectionStates.connected : 1;
   // Si ya tenemos una conexión activa, devolverla
   if (cached.conn && mongoose.connection.readyState === CONNECTED) {
-    console.log('[dbConnect] Reutilizando conexión activa');
     return cached.conn;
   }
 
@@ -37,7 +34,6 @@ export async function dbConnect(uri?: string) {
   if (cached.promise) {
     try {
       cached.conn = await cached.promise;
-      console.log('[dbConnect] Esperando promesa de conexión existente');
       if (mongoose.connection.readyState !== CONNECTED) {
         console.warn('[dbConnect] Conexión sigue en estado 0 tras promesa, reintentando...');
         cached.promise = mongoose.connect(connectionUri, {
@@ -55,7 +51,6 @@ export async function dbConnect(uri?: string) {
           console.error('[dbConnect] Conexión no establecida tras reintento');
           throw new Error('MongoDB connection not established (reintento)');
         }
-        console.log('[dbConnect] Conexión establecida correctamente tras reintento');
       }
       return cached.conn;
     } catch (e) {
@@ -76,12 +71,10 @@ export async function dbConnect(uri?: string) {
 
   try {
     cached.conn = await cached.promise;
-    console.log('[dbConnect] Estado después de conectar:', mongoose.connection.readyState);
     if (mongoose.connection.readyState !== CONNECTED) {
       console.error('[dbConnect] Conexión no establecida');
       throw new Error('MongoDB connection not established');
     }
-    console.log('[dbConnect] Conexión establecida correctamente');
   } catch (e) {
     cached.promise = null;
     console.error('[dbConnect] Error al conectar:', e);

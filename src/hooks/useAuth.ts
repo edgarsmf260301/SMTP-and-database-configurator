@@ -8,7 +8,7 @@ interface User {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'manager' | 'staff';
+  role: 'admin' | 'box' | 'kitchen' | 'administration' | 'Waiter';
 }
 
 interface AuthState {
@@ -80,7 +80,7 @@ export function useAuth() {
     }
   };
 
-  const requireAuth = (requiredRole?: 'admin' | 'manager' | 'staff') => {
+  const requireAuth = (requiredRole?: 'admin' | 'box' | 'kitchen' | 'administration' | 'Waiter') => {
     if (authState.isLoading) return;
 
     if (!authState.isAuthenticated) {

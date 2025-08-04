@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Footer from './Footer';
 import fs from 'fs';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -1209,17 +1210,7 @@ export default function SetupWizard() {
         </div>
         {/* Footer solo en bienvenida y finalizado */}
         {(currentStep === 'welcome' || currentStep === 'complete') && (
-          <footer className="mt-10 text-center text-gray-400 text-xs sm:text-sm">
-            © 2025 Sistema de Restaurante{' '}
-            <a
-              href="https://my-portfolio-lime-zeta-70.vercel.app/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-orange-400 hover:underline font-semibold"
-            >
-              Edgar Martinez - Desarrollador Web
-            </a>
-          </footer>
+          <Footer />
         )}
       </div>
     </div>

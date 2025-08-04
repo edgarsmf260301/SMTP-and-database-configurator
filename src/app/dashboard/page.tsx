@@ -1,67 +1,45 @@
-'use client';
+// ...existing code (versión limpia y correcta del dashboard, sin duplicados ni 'use client' en medio)...
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import ProtectedRoute from '@/components/ProtectedRoute';
-import LoadingPage from '@/components/LoadingPage';
+import React, { useState, useEffect } from "react";
+import PanelLayout from "@/components/PanelLayout";
+import LoadingPage from "@/components/LoadingPage";
 
-function DashboardContent() {
+type Order = {
+  id: number;
+  customer: string;
+  total: number;
+  status: "ready" | "preparing" | "pending";
+};
+
+export default function DashboardPage() {
   const [stats, setStats] = useState({
     totalOrders: 0,
     totalRevenue: 0,
     averageOrderValue: 0,
   });
-  type Order = {
-    id: number;
-    customer: string;
-    total: number;
-    status: 'ready' | 'preparing' | 'pending';
-  };
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
 
   useEffect(() => {
-    // TODO: Cargar datos del dashboard desde la API
-    const loadDashboardData = async () => {
-      try {
-        // Simulación de carga de datos
-        setTimeout(() => {
-          setStats({
-            totalOrders: 156,
-            totalRevenue: 12500.50,
-            averageOrderValue: 80.13,
-          });
-          setRecentOrders([
-            { id: 1, customer: 'Juan Pérez', total: 45.00, status: 'ready' },
-            { id: 2, customer: 'María García', total: 32.50, status: 'preparing' },
-            { id: 3, customer: 'Carlos López', total: 78.25, status: 'pending' },
-          ]);
-          setIsLoading(false);
-        }, 1000);
-      } catch (error) {
-        console.error('Error loading dashboard data:', error);
-        setIsLoading(false);
-      }
-    };
-
-    loadDashboardData();
+    setTimeout(() => {
+      setStats({
+        totalOrders: 156,
+        totalRevenue: 12500.5,
+        averageOrderValue: 80.13,
+      });
+      setRecentOrders([
+        { id: 1, customer: "Juan Pérez", total: 45.0, status: "ready" },
+        { id: 2, customer: "María García", total: 32.5, status: "preparing" },
+        { id: 3, customer: "Carlos López", total: 78.25, status: "pending" },
+      ]);
+      setIsLoading(false);
+    }, 1000);
   }, []);
-
-  const handleLogout = async () => {
-    // Llamar al endpoint de logout para limpiar la sesión
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-    } catch (error) {
-      console.error('Error during logout:', error);
-    }
-    // Redirigir y reemplazar el historial para evitar volver atrás
-    router.replace('/login');
-  };
 
   if (isLoading) {
     return (
-      <LoadingPage 
+      <LoadingPage
         title="Cargando dashboard..."
         subtitle="Preparando tu panel de administración"
       />
@@ -69,139 +47,145 @@ function DashboardContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                Sistema de Restaurante
-              </h1>
-              <p className="text-gray-600">Panel de Administración</p>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">Admin</span>
-              <button
-                onClick={handleLogout}
-                className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
-              >
-                Cerrar Sesión
-              </button>
-            </div>
+    <PanelLayout>
+      <div className="text-white text-2xl font-bold mb-4">
+        Bienvenido al panel de Viticos
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        {/* Card 1 */}
+        <div className="bg-gradient-to-br from-blue-800 via-blue-700 to-blue-900 rounded-2xl shadow-xl p-6 flex items-center gap-4 border border-blue-600/30">
+          <div className="p-3 rounded-full bg-blue-600/20 text-blue-300">
+            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+              />
+            </svg>
+          </div>
+          <div>
+            <p className="text-base font-medium text-blue-200">
+              Total de Pedidos
+            </p>
+            <p className="text-3xl font-bold text-white drop-shadow">
+              {stats.totalOrders}
+            </p>
           </div>
         </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="p-3 rounded-full bg-blue-100 text-blue-600">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total de Pedidos</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.totalOrders}</p>
-              </div>
-            </div>
+        {/* Card 2 */}
+        <div className="bg-gradient-to-br from-green-800 via-green-700 to-green-900 rounded-2xl shadow-xl p-6 flex items-center gap-4 border border-green-600/30">
+          <div className="p-3 rounded-full bg-green-600/20 text-green-300">
+            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
+              />
+            </svg>
           </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="p-3 rounded-full bg-green-100 text-green-600">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                </svg>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Ingresos Totales</p>
-                <p className="text-2xl font-semibold text-gray-900">${stats.totalRevenue.toFixed(2)}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="p-3 rounded-full bg-yellow-100 text-yellow-600">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Promedio por Pedido</p>
-                <p className="text-2xl font-semibold text-gray-900">${stats.averageOrderValue.toFixed(2)}</p>
-              </div>
-            </div>
+          <div>
+            <p className="text-base font-medium text-green-200">
+              Ingresos Totales
+            </p>
+            <p className="text-3xl font-bold text-white drop-shadow">
+              ${stats.totalRevenue.toFixed(2)}
+            </p>
           </div>
         </div>
-
-        {/* Recent Orders */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-medium text-gray-900">Pedidos Recientes</h2>
+        {/* Card 3 */}
+        <div className="bg-gradient-to-br from-yellow-700 via-yellow-600 to-yellow-800 rounded-2xl shadow-xl p-6 flex items-center gap-4 border border-yellow-500/30">
+          <div className="p-3 rounded-full bg-yellow-400/20 text-yellow-200">
+            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+              />
+            </svg>
           </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Cliente
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Total
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Estado
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Acciones
-                  </th>
+          <div>
+            <p className="text-base font-medium text-yellow-100">
+              Promedio por Pedido
+            </p>
+            <p className="text-3xl font-bold text-white drop-shadow">
+              ${stats.averageOrderValue.toFixed(2)}
+            </p>
+          </div>
+        </div>
+      </div>
+      {/* Pedidos Recientes */}
+      <div className="bg-gray-800/80 rounded-2xl shadow-2xl border border-gray-700/40 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-700/60 flex items-center gap-2">
+          <svg className="w-6 h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M3 7h18M3 12h18M3 17h18"
+            />
+          </svg>
+          <h2 className="text-lg sm:text-xl font-semibold text-white">
+            Pedidos Recientes
+          </h2>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-700">
+            <thead className="bg-gray-900/80">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-bold text-orange-300 uppercase tracking-wider">
+                  Cliente
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-bold text-orange-300 uppercase tracking-wider">
+                  Total
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-bold text-orange-300 uppercase tracking-wider">
+                  Estado
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-bold text-orange-300 uppercase tracking-wider">
+                  Acciones
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-gray-800 divide-y divide-gray-700">
+              {recentOrders.map((order) => (
+                <tr key={order.id}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
+                    {order.customer}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-orange-200 font-semibold">
+                    {order.total.toFixed(2)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span
+                      className={`inline-flex px-3 py-1 text-xs font-bold rounded-full shadow transition-all duration-300 ${
+                        order.status === "ready"
+                          ? "bg-green-500/20 text-green-300 border border-green-400/40"
+                          : order.status === "preparing"
+                          ? "bg-yellow-400/20 text-yellow-200 border border-yellow-300/40"
+                          : "bg-gray-500/20 text-gray-200 border border-gray-400/40"
+                      }`}
+                    >
+                      {order.status === "ready"
+                        ? "Listo"
+                        : order.status === "preparing"
+                        ? "Preparando"
+                        : "Pendiente"}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <button className="text-orange-400 hover:text-orange-200 font-semibold transition-colors duration-200 underline underline-offset-2">
+                      Ver detalles
+                    </button>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {recentOrders.map((order) => (
-                  <tr key={order.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {order.customer}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      ${order.total.toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        order.status === 'ready' ? 'bg-green-100 text-green-800' :
-                        order.status === 'preparing' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {order.status === 'ready' ? 'Listo' :
-                         order.status === 'preparing' ? 'Preparando' : 'Pendiente'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <button className="text-primary-600 hover:text-primary-900">
-                        Ver detalles
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
         </div>
-      </main>
-    </div>
+      </div>
+    </PanelLayout>
   );
 }
-
-export default function DashboardPage() {
-  return (
-    <ProtectedRoute requiredRole="admin">
-      <DashboardContent />
-    </ProtectedRoute>
-  );
-} 
