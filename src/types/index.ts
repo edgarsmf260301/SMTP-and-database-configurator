@@ -3,7 +3,7 @@ export interface User {
   _id: string;
   name: string;
   email: string;
-  role: 'admin' | 'manager' | 'staff';
+  roles: string[];
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -16,7 +16,7 @@ export interface UserLogin {
 
 export interface UserRegister extends UserLogin {
   name: string;
-  role?: 'admin' | 'manager' | 'staff';
+  roles?: string[];
 }
 
 // Tipos de respuesta de API

@@ -25,9 +25,9 @@ export async function POST(req: Request) {
     await dbConnect(uri);
     console.log('Conexión exitosa. Buscando usuario admin...');
     // Buscar admin activo en la colección configurada
-    const admin = await User.findOne({ role: 'admin', isActive: true });
-    console.log('Resultado de búsqueda admin:', admin);
-    return NextResponse.json({ exists: !!admin });
+  const admin = await User.findOne({ roles: 'admin', isActive: true });
+  console.log('Resultado de búsqueda admin:', admin);
+  return NextResponse.json({ exists: !!admin });
   } catch (error) {
     console.error('Error verificando usuario administrador:', error);
     return NextResponse.json({ error: error instanceof Error ? error.message : String(error) }, { status: 500 });

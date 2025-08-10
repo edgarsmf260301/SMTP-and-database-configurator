@@ -46,7 +46,7 @@ export default function ProtectedRoute({ children, requiredRole }: ProtectedRout
         }
 
         // Verificar rol si es necesario
-        if (requiredRole && authData.user?.role !== requiredRole) {
+        if (requiredRole && (!Array.isArray(authData.user?.roles) || !authData.user.roles.includes(requiredRole))) {
           router.push('/dashboard');
           return;
         }

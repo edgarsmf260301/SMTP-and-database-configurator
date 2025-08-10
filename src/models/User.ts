@@ -5,7 +5,7 @@ export interface IUser extends Document {
   name: string;
   email: string;
   password: string;
-  role: 'admin' | 'manager' | 'staff';
+  roles: string[];
   isActive: boolean;
   emailVerified: boolean;
   verificationToken?: string;
@@ -45,10 +45,10 @@ const userSchema = new Schema<IUser>(
       required: [true, 'La contraseña es requerida'],
       minlength: [6, 'La contraseña debe tener al menos 6 caracteres'],
     },
-    role: {
-      type: String,
-      enum: ['admin', 'manager', 'staff'],
-      default: 'staff',
+    roles: {
+      type: [String],
+      enum: ['admin', 'manager', 'staff', 'box', 'kitchen', 'administration', 'Waiter'],
+      required: true,
     },
     isActive: {
       type: Boolean,

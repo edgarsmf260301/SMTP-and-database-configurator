@@ -53,11 +53,11 @@ NEXTAUTH_URL=http://localhost:3000
       const restaurantDb = db.useDb('Restaurant');
       const UserModel = restaurantDb.model('User', User.schema);
 
-      // Verificar si ya existe un usuario admin
-      const existingAdmin = await UserModel.findOne({ role: 'admin' });
+      // Verificar si ya existe un usuario admin activo con roles que incluyan 'admin'
+      const existingAdmin = await UserModel.findOne({ isActive: true, roles: 'admin' });
       if (existingAdmin) {
         return NextResponse.json(
-          { error: 'Ya existe un usuario administrador' },
+          { error: 'Ya existe un usuario administrador activo' },
           { status: 400 }
         );
       }
@@ -88,12 +88,12 @@ NEXTAUTH_URL=http://localhost:3000
       const salt = await bcrypt.genSalt(10);
       const hashedToken = await bcrypt.hash(verificationToken, salt);
 
-      // Crear el usuario administrador con verificación pendiente
+      // Crear el usuario administrador con verificación pendiente y roles: ['admin']
       const adminUser = new UserModel({
         name,
         email,
         password,
-        role: 'admin',
+        roles: ['admin'],
         isActive: false, // No activo hasta verificar email
         emailVerified: false,
         verificationToken: hashedToken, // Guardar el hash
@@ -146,7 +146,7 @@ NEXTAUTH_URL=http://localhost:3000
         user: {
           name: adminUser.name,
           email: adminUser.email,
-          role: adminUser.role,
+          roles: adminUser.roles,
         }
       });
     } catch (connectionError: unknown) {

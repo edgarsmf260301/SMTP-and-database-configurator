@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Intentar conectar a MongoDB y verificar admin usando createConnection
-    const connectionUri = ensureRestaurantDatabase(uri);
+    const connectionUri = uri;
     let testConn: mongoose.Connection | null = null;
     try {
       testConn = await mongoose.createConnection(connectionUri, {
@@ -43,8 +43,8 @@ export async function POST(request: NextRequest) {
         } else {
           UserModel = testConn.model('User', userSchema) as mongoose.Model<any>;
         }
-        const admin = await UserModel.findOne({ role: 'admin', isActive: true }).exec();
-        adminExists = !!admin;
+  const admin = await UserModel.findOne({ roles: 'admin', isActive: true }).exec();
+  adminExists = !!admin;
       } catch {
         adminExists = false;
       }

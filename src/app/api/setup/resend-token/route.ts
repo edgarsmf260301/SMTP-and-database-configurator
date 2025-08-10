@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
 
     // Conectar a MongoDB
     try {
-      const connectionUri = ensureRestaurantDatabase(mongodb.uri);
+      const connectionUri = mongodb.uri;
       
       await mongoose.connect(connectionUri, {
         bufferCommands: false,

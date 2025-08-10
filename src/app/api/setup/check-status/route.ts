@@ -37,18 +37,18 @@ export async function GET() {
 
       // Verificar conexión a MongoDB usando dbConnect
       try {
-        const dbConnect = (await import('@/lib/mongodb')).default;
-        const connectionUri = ensureRestaurantDatabase(mongoUri);
-        await dbConnect(connectionUri);
+  const dbConnect = (await import('@/lib/mongodb')).default;
+  const connectionUri = mongoUri;
+  await dbConnect(connectionUri);
 
         if (mongoose.connection.readyState !== 1) {
           throw new Error('Conexión no establecida');
         }
 
         const User = (await import('@/models/User')).default;
-        // Buscar admin activo y con email verificado
-        const adminCount = await User.countDocuments({ role: 'admin', isActive: true, emailVerified: true });
-        console.log('[check-status] Admins encontrados:', adminCount);
+  // Buscar admin activo y con email verificado (roles: 'admin')
+  const adminCount = await User.countDocuments({ roles: 'admin', isActive: true, emailVerified: true });
+  console.log('[check-status] Admins encontrados:', adminCount);
 
         // No cerrar la conexión manualmente, dejar que el singleton la maneje
 

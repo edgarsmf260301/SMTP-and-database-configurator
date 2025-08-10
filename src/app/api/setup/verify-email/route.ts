@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
         user: {
           name: user.name,
           email: user.email,
-          role: user.role,
+          roles: user.roles,
         }
       });
     } catch (connectionError: unknown) {

@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Conectar a MongoDB solo si no hay conexión activa
-    const connectionUri = ensureRestaurantDatabase(process.env.MONGODB_URI || '');
+    const connectionUri = process.env.MONGODB_URI || '';
     try {
       if (mongoose.connection.readyState !== 1) {
         await import('@/lib/mongodb').then(mod => mod.dbConnect(connectionUri));

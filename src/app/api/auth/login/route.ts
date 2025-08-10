@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Conectar a MongoDB solo si no hay conexión activa
-    const connectionUri = ensureRestaurantDatabase(process.env.MONGODB_URI || '');
+    const connectionUri = process.env.MONGODB_URI || '';
     try {
       if (mongoose.connection.readyState !== 1) {
         await import('@/lib/mongodb').then(mod => mod.dbConnect(connectionUri));
@@ -53,12 +53,12 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Generar token JWT
+      // Generar token JWT con roles
       const token = generateJWTToken(
         {
           userId: user._id,
           email: user.email,
-          role: user.role,
+          roles: user.roles,
           name: user.name,
         },
         process.env.NEXTAUTH_SECRET || 'fallback-secret',
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
           id: user._id,
           name: user.name,
           email: user.email,
-          role: user.role,
+          roles: user.roles,
         }
       });
 
