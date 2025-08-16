@@ -1,15 +1,15 @@
-// ...existing code (versión limpia y correcta del dashboard, sin duplicados ni 'use client' en medio)...
-"use client";
+'use client';
 
-import React, { useState, useEffect } from "react";
-import PanelLayout from "@/components/PanelLayout";
-import LoadingPage from "@/components/LoadingPage";
+import React, { useState, useEffect } from 'react';
+import PanelLayout from '@/components/layout/PanelLayout';
+import LoadingPage from '@/components/ui/LoadingPage';
+import { motion } from 'framer-motion';
 
 type Order = {
   id: number;
   customer: string;
   total: number;
-  status: "ready" | "preparing" | "pending";
+  status: 'ready' | 'preparing' | 'pending';
 };
 
 export default function DashboardPage() {
@@ -29,9 +29,9 @@ export default function DashboardPage() {
         averageOrderValue: 80.13,
       });
       setRecentOrders([
-        { id: 1, customer: "Juan Pérez", total: 45.0, status: "ready" },
-        { id: 2, customer: "María García", total: 32.5, status: "preparing" },
-        { id: 3, customer: "Carlos López", total: 78.25, status: "pending" },
+        { id: 1, customer: 'Juan Pérez', total: 45.0, status: 'ready' },
+        { id: 2, customer: 'María García', total: 32.5, status: 'preparing' },
+        { id: 3, customer: 'Carlos López', total: 78.25, status: 'pending' },
       ]);
       setIsLoading(false);
     }, 1000);
@@ -48,14 +48,29 @@ export default function DashboardPage() {
 
   return (
     <PanelLayout>
-      <div className="text-white text-2xl font-bold mb-4">
-        Bienvenido al panel de Viticos
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-        {/* Card 1 */}
-        <div className="bg-gradient-to-br from-blue-800 via-blue-700 to-blue-900 rounded-2xl shadow-xl p-6 flex items-center gap-4 border border-blue-600/30">
-          <div className="p-3 rounded-full bg-blue-600/20 text-blue-300">
-            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      {/* Espacio superior para mejor organización */}
+      <div className="h-5"></div>
+
+      {/* Cards de estadísticas */}
+      <motion.div
+        className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
+      >
+        {/* Card 1 - Total de Pedidos */}
+        <motion.div
+          className="bg-gradient-to-br from-blue-800/80 via-blue-700/90 to-blue-900/80 rounded-2xl shadow-2xl p-6 flex items-center gap-4 border border-blue-600/30 backdrop-blur-sm hover:shadow-blue-500/25 transition-all duration-300"
+          whileHover={{ scale: 1.02, y: -5 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <div className="p-3 rounded-full bg-blue-600/20 text-blue-300 border border-blue-500/30">
+            <svg
+              className="w-7 h-7"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -72,11 +87,21 @@ export default function DashboardPage() {
               {stats.totalOrders}
             </p>
           </div>
-        </div>
-        {/* Card 2 */}
-        <div className="bg-gradient-to-br from-green-800 via-green-700 to-green-900 rounded-2xl shadow-xl p-6 flex items-center gap-4 border border-green-600/30">
-          <div className="p-3 rounded-full bg-green-600/20 text-green-300">
-            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        </motion.div>
+
+        {/* Card 2 - Ingresos Totales */}
+        <motion.div
+          className="bg-gradient-to-br from-green-800/80 via-green-700/90 to-green-900/80 rounded-2xl shadow-2xl p-6 flex items-center gap-4 border border-green-600/30 backdrop-blur-sm hover:shadow-green-500/25 transition-all duration-300"
+          whileHover={{ scale: 1.02, y: -5 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <div className="p-3 rounded-full bg-green-600/20 text-green-300 border border-green-500/30">
+            <svg
+              className="w-7 h-7"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -93,11 +118,21 @@ export default function DashboardPage() {
               ${stats.totalRevenue.toFixed(2)}
             </p>
           </div>
-        </div>
-        {/* Card 3 */}
-        <div className="bg-gradient-to-br from-yellow-700 via-yellow-600 to-yellow-800 rounded-2xl shadow-xl p-6 flex items-center gap-4 border border-yellow-500/30">
-          <div className="p-3 rounded-full bg-yellow-400/20 text-yellow-200">
-            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        </motion.div>
+
+        {/* Card 3 - Promedio por Pedido */}
+        <motion.div
+          className="bg-gradient-to-br from-yellow-700/80 via-yellow-600/90 to-yellow-800/80 rounded-2xl shadow-2xl p-6 flex items-center gap-4 border border-yellow-500/30 backdrop-blur-sm hover:shadow-yellow-500/25 transition-all duration-300"
+          whileHover={{ scale: 1.02, y: -5 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <div className="p-3 rounded-full bg-yellow-400/20 text-yellow-200 border border-yellow-300/30">
+            <svg
+              className="w-7 h-7"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -114,25 +149,39 @@ export default function DashboardPage() {
               ${stats.averageOrderValue.toFixed(2)}
             </p>
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
+
       {/* Pedidos Recientes */}
-      <div className="bg-gray-800/80 rounded-2xl shadow-2xl border border-gray-700/40 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-700/60 flex items-center gap-2">
-          <svg className="w-6 h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M3 7h18M3 12h18M3 17h18"
-            />
-          </svg>
+      <motion.div
+        className="bg-gradient-to-br from-gray-800/80 via-gray-800/90 to-gray-900/80 rounded-2xl shadow-2xl border border-gray-700/40 overflow-hidden backdrop-blur-sm"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+      >
+        <div className="px-6 py-4 border-b border-gray-700/60 flex items-center gap-3 bg-gradient-to-r from-gray-800/90 to-gray-900/90">
+          <div className="p-2 rounded-lg bg-orange-500/20 border border-orange-500/30">
+            <svg
+              className="w-5 h-5 text-orange-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M3 7h18M3 12h18M3 17h18"
+              />
+            </svg>
+          </div>
           <h2 className="text-lg sm:text-xl font-semibold text-white">
             Pedidos Recientes
           </h2>
         </div>
+
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-700">
+          <table className="min-w-full divide-y divide-gray-700/60">
             <thead className="bg-gray-900/80">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-bold text-orange-300 uppercase tracking-wider">
@@ -149,43 +198,53 @@ export default function DashboardPage() {
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-gray-800 divide-y divide-gray-700">
-              {recentOrders.map((order) => (
-                <tr key={order.id}>
+            <tbody className="bg-gray-800/50 divide-y divide-gray-700/60">
+              {recentOrders.map((order, index) => (
+                <motion.tr
+                  key={order.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.3, delay: 0.3 + index * 0.1 }}
+                  className="hover:bg-gray-700/30 transition-colors duration-200"
+                >
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
                     {order.customer}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-orange-200 font-semibold">
-                    {order.total.toFixed(2)}
+                    ${order.total.toFixed(2)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
                       className={`inline-flex px-3 py-1 text-xs font-bold rounded-full shadow transition-all duration-300 ${
-                        order.status === "ready"
-                          ? "bg-green-500/20 text-green-300 border border-green-400/40"
-                          : order.status === "preparing"
-                          ? "bg-yellow-400/20 text-yellow-200 border border-yellow-300/40"
-                          : "bg-gray-500/20 text-gray-200 border border-gray-400/40"
+                        order.status === 'ready'
+                          ? 'bg-green-500/20 text-green-300 border border-green-400/40'
+                          : order.status === 'preparing'
+                            ? 'bg-yellow-400/20 text-yellow-200 border border-yellow-300/40'
+                            : 'bg-gray-500/20 text-gray-200 border border-gray-400/40'
                       }`}
                     >
-                      {order.status === "ready"
-                        ? "Listo"
-                        : order.status === "preparing"
-                        ? "Preparando"
-                        : "Pendiente"}
+                      {order.status === 'ready'
+                        ? 'Listo'
+                        : order.status === 'preparing'
+                          ? 'Preparando'
+                          : 'Pendiente'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <button className="text-orange-400 hover:text-orange-200 font-semibold transition-colors duration-200 underline underline-offset-2">
+                    <motion.button
+                      className="text-orange-400 hover:text-orange-200 font-semibold transition-colors duration-200 underline underline-offset-2"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
                       Ver detalles
-                    </button>
+                    </motion.button>
                   </td>
-                </tr>
+                </motion.tr>
               ))}
             </tbody>
           </table>
         </div>
-      </div>
+      </motion.div>
     </PanelLayout>
   );
 }

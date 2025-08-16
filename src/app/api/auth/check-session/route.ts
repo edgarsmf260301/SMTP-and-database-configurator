@@ -1,75 +1,152 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import mongoose from 'mongoose';
+import jwt from 'jsonwebtoken';
+import { connectToDatabase } from '@/lib/mongodb';
 import User from '@/models/User';
-import { verifyJWTToken } from '@/lib/token-utils';
-import { ensureRestaurantDatabase } from '@/lib/mongodb-utils';
+import { deviceSessionManager } from '@/lib/device-session-manager';
+import { logger, maskId } from '@/lib/logger';
+import { getJWTSecret } from '@/lib/token-utils';
 
 export async function GET(request: NextRequest) {
   try {
-    // Verificar si el sistema está configurado
-    const envPath = require('path').join(process.cwd(), '.env.local');
-    const fs = require('fs');
-    
-    if (!fs.existsSync(envPath)) {
-      return NextResponse.json({ isAuthenticated: false, authenticated: false, error: 'System not configured' }, { status: 401 });
+    const authToken = request.cookies.get('auth-token')?.value;
+    const sessionId = request.cookies.get('session-id')?.value;
+
+    if (!authToken || !sessionId) {
+      return NextResponse.json(
+        {
+          authenticated: false,
+          error: 'Token de autenticación o ID de sesión no encontrado',
+        },
+        { status: 401 }
+      );
     }
 
-    // Obtener el token de la cookie
-    const cookieStore = await cookies();
-    const token = cookieStore.get('auth-token')?.value;
-
-    if (!token) {
-      return NextResponse.json({ isAuthenticated: false, authenticated: false, error: 'No token found' }, { status: 401 });
-    }
-
-    // Verificar el token
-    const secret = process.env.NEXTAUTH_SECRET;
-    if (!secret) {
-      return NextResponse.json({ isAuthenticated: false, authenticated: false, error: 'Server configuration error' }, { status: 500 });
-    }
-
+    // Verificar JWT
+    let decoded: {
+      userId: string;
+      email: string;
+      roles: string[];
+      exp: number;
+    };
     try {
-      const decoded = verifyJWTToken(token, secret);
-      
-      if (!decoded) {
-        return NextResponse.json({ isAuthenticated: false, authenticated: false, error: 'Invalid token' }, { status: 401 });
-      }
-      
-      // Conectar a la base de datos
-      // Usar el helper dbConnect() para manejar la conexión correctamente
-      await import('@/lib/mongodb').then(mod => mod.dbConnect());
-
-      // Verificar que la conexión esté activa
-      const db = mongoose.connection;
-      if (db.readyState !== 1) {
-        throw new Error('Conexión no establecida');
-      }
-
-      // Verificar que el usuario existe y está activo
-      const user = await User.findById(decoded.userId).select('-password');
-
-      if (!user || !user.isActive || !user.emailVerified) {
-        return NextResponse.json({ isAuthenticated: false, authenticated: false, error: 'User not found or inactive' }, { status: 401 });
-      }
-
-      return NextResponse.json({
-        isAuthenticated: true,
-        authenticated: true,
-        user: {
-          id: user._id,
-          name: user.name,
-          email: user.email,
-          roles: user.roles
-        }
-      });
-
-    } catch (jwtError) {
-      return NextResponse.json({ isAuthenticated: false, authenticated: false, error: 'Invalid token' }, { status: 401 });
+      decoded = jwt.verify(authToken, getJWTSecret()) as {
+        userId: string;
+        email: string;
+        roles: string[];
+        exp: number;
+      };
+    } catch (error) {
+      logger.warn('Invalid JWT token', { error });
+      return NextResponse.json(
+        {
+          authenticated: false,
+          error: 'Token inválido',
+        },
+        { status: 401 }
+      );
     }
 
+    // Verificar que el session-id contenga el userId del token
+    // El formato es: userId_timestamp_random
+    if (!sessionId.startsWith(decoded.userId + '_')) {
+      return NextResponse.json(
+        {
+          authenticated: false,
+          error: 'Sesión inválida',
+        },
+        { status: 401 }
+      );
+    }
+
+    // Conectar a la base de datos
+    await connectToDatabase();
+
+    // Buscar usuario
+    const user = await User.findById(decoded.userId);
+    if (!user) {
+      return NextResponse.json(
+        {
+          authenticated: false,
+          error: 'Usuario no encontrado',
+        },
+        { status: 401 }
+      );
+    }
+
+    // Verificar si el usuario está activo
+    if (!user.isActive) {
+      logger.info('User disabled, logging out', {
+        userId: maskId(user._id.toString()),
+      });
+      return NextResponse.json(
+        {
+          authenticated: false,
+          error: 'Usuario deshabilitado',
+        },
+        { status: 401 }
+      );
+    }
+
+    // Verificar si el email está verificado
+    if (!user.emailVerified) {
+      return NextResponse.json(
+        {
+          authenticated: false,
+          error: 'Email no verificado',
+        },
+        { status: 401 }
+      );
+    }
+
+    // Actualizar actividad de la sesión por sessionId
+    const activityUpdated =
+      deviceSessionManager.updateSessionActivityById(sessionId);
+    if (!activityUpdated) {
+      logger.warn('Session activity update failed', {
+        sessionId: maskId(sessionId),
+        userId: maskId(user._id.toString()),
+      });
+      return NextResponse.json(
+        {
+          authenticated: false,
+          error: 'Sesión expirada',
+        },
+        { status: 401 }
+      );
+    }
+
+    // Verificar si el usuario tiene sesión activa en otro dispositivo
+    const isLoggedInElsewhere = deviceSessionManager.isUserLoggedInElsewhere(
+      user._id.toString(),
+      sessionId
+    );
+    if (isLoggedInElsewhere) {
+      logger.info('User logged in elsewhere, but allowing current session', {
+        userId: maskId(user._id.toString()),
+        sessionId: maskId(sessionId),
+      });
+      // No bloquear la sesión actual, solo registrar la información
+    }
+
+    return NextResponse.json({
+      authenticated: true,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        roles: user.roles,
+        isActive: user.isActive,
+        emailVerified: user.emailVerified,
+      },
+    });
   } catch (error) {
-    console.error('Error checking session:', error);
-    return NextResponse.json({ isAuthenticated: false, authenticated: false, error: 'Server error' }, { status: 500 });
+    logger.error('Check session error', error);
+    return NextResponse.json(
+      {
+        authenticated: false,
+        error: 'Error interno del servidor',
+      },
+      { status: 500 }
+    );
   }
-} 
+}

@@ -13,7 +13,13 @@ export interface SendVerificationEmailOptions {
   expiresInSeconds?: number; // Optional: default 110
 }
 
-export async function sendVerificationEmail({ email, name, smtp, code, expiresInSeconds = 110 }: SendVerificationEmailOptions) {
+export async function sendVerificationEmail({
+  email,
+  name,
+  smtp,
+  code,
+  expiresInSeconds = 110,
+}: SendVerificationEmailOptions) {
   // Generate code if not provided
   const verificationToken = code || generateVerificationToken();
   const transporter = nodemailer.createTransport({

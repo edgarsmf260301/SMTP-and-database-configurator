@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     // Conectar a MongoDB
     try {
       const connectionUri = mongodb.uri;
-      
+
       await mongoose.connect(connectionUri, {
         bufferCommands: false,
       });
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
       // Actualizar el usuario con el nuevo token hasheado
       user.verificationToken = hashedToken;
       user.tokenExpires = tokenExpires;
-      
+
       await user.save();
 
       // Enviar email de verificación
@@ -105,17 +105,16 @@ export async function POST(request: NextRequest) {
       });
     } catch (connectionError: unknown) {
       await mongoose.disconnect();
-      const errorMessage = connectionError instanceof Error ? connectionError.message : 'Error de conexión desconocido';
+      const errorMessage =
+        connectionError instanceof Error
+          ? connectionError.message
+          : 'Error de conexión desconocido';
       throw new Error(`Error de conexión: ${errorMessage}`);
     }
   } catch (error: unknown) {
     console.error('Error resending token:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Error al reenviar token';
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: 500 }
-    );
+    const errorMessage =
+      error instanceof Error ? error.message : 'Error al reenviar token';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
-
- 

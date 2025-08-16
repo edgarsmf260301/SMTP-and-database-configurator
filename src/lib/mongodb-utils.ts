@@ -10,7 +10,10 @@
 
 export function ensureRestaurantDatabase(uri: string): string {
   // Elimina cualquier base de datos al final de la URI y fuerza /Restaurant antes de los parámetros de query
-  let cleanUri = uri.replace(/(mongodb(?:\+srv)?:\/\/[^/]+)(?:\/[^?]*)?/, '$1/Restaurant');
+  let cleanUri = uri.replace(
+    /(mongodb(?:\+srv)?:\/\/[^/]+)(?:\/[^?]*)?/,
+    '$1/Restaurant'
+  );
   // Si no tiene /Restaurant, agrégalo
   if (!cleanUri.match(/\/Restaurant(\b|$)/)) {
     const [base, params] = cleanUri.split('?');
@@ -27,4 +30,4 @@ export function ensureRestaurantDatabase(uri: string): string {
  */
 export function isValidMongoUri(uri: string): boolean {
   return uri.startsWith('mongodb://') || uri.startsWith('mongodb+srv://');
-} 
+}

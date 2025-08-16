@@ -41,36 +41,39 @@ export async function POST(request: NextRequest) {
     // Verificar la conexión
     try {
       await transporter.verify();
-      
+
       return NextResponse.json({
         success: true,
-        message: 'Configuración SMTP verificada correctamente'
+        message: 'Configuración SMTP verificada correctamente',
       });
     } catch (verifyError: unknown) {
-      const errorMessage = verifyError instanceof Error ? verifyError.message : 'Error de verificación desconocido';
+      const errorMessage =
+        verifyError instanceof Error
+          ? verifyError.message
+          : 'Error de verificación desconocido';
       throw new Error(`Error de verificación SMTP: ${errorMessage}`);
     }
   } catch (error: unknown) {
     console.error('Error testing SMTP configuration:', error);
-    
+
     // Mensajes de error más específicos
     let errorMessage = 'Error al verificar configuración SMTP';
-    
+
     if (error instanceof Error) {
       if (error.message.includes('Invalid login')) {
-        errorMessage = 'Credenciales de Gmail inválidas. Verifica tu email y contraseña de aplicación.';
+        errorMessage =
+          'Credenciales de Gmail inválidas. Verifica tu email y contraseña de aplicación.';
       } else if (error.message.includes('Less secure app access')) {
-        errorMessage = 'Debes habilitar el acceso de aplicaciones menos seguras en tu cuenta de Google.';
+        errorMessage =
+          'Debes habilitar el acceso de aplicaciones menos seguras en tu cuenta de Google.';
       } else if (error.message.includes('2FA')) {
-        errorMessage = 'Debes generar una contraseña de aplicación si tienes verificación en dos pasos activada.';
+        errorMessage =
+          'Debes generar una contraseña de aplicación si tienes verificación en dos pasos activada.';
       } else if (error.message.includes('network')) {
         errorMessage = 'Error de red. Verifica tu conexión a internet.';
       }
     }
 
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
-} 
+}

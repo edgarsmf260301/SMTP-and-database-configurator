@@ -1,4 +1,3 @@
-
 // Usar un singleton global para que el Map sobreviva a recargas y sea compartido entre rutas
 const globalAny = global as any;
 if (!globalAny._tempAdminVerifications) {
@@ -7,7 +6,8 @@ if (!globalAny._tempAdminVerifications) {
 if (!globalAny._tempAdminVerifiedEmails) {
   globalAny._tempAdminVerifiedEmails = new Set();
 }
-export const tempAdminVerifications: Map<string, any> = globalAny._tempAdminVerifications;
+export const tempAdminVerifications: Map<string, any> =
+  globalAny._tempAdminVerifications;
 const tempAdminVerifiedEmails: Set<string> = globalAny._tempAdminVerifiedEmails;
 
 function normalizeEmail(email: string): string {

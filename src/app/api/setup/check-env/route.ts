@@ -13,12 +13,18 @@ export async function GET() {
     let mongodb = '';
     let smtp = { email: '', password: '' };
     for (const line of lines) {
-      if (line.startsWith('MONGODB_URI=')) mongodb = line.replace('MONGODB_URI=', '').trim();
-      if (line.startsWith('SMTP_EMAIL=')) smtp.email = line.replace('SMTP_EMAIL=', '').trim();
-      if (line.startsWith('SMTP_PASSWORD=')) smtp.password = line.replace('SMTP_PASSWORD=', '').trim();
+      if (line.startsWith('MONGODB_URI='))
+        mongodb = line.replace('MONGODB_URI=', '').trim();
+      if (line.startsWith('SMTP_EMAIL='))
+        smtp.email = line.replace('SMTP_EMAIL=', '').trim();
+      if (line.startsWith('SMTP_PASSWORD='))
+        smtp.password = line.replace('SMTP_PASSWORD=', '').trim();
     }
     return NextResponse.json({ exists: true, mongodb, smtp });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Error leyendo .env.local' }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message || 'Error leyendo .env.local' },
+      { status: 500 }
+    );
   }
 }

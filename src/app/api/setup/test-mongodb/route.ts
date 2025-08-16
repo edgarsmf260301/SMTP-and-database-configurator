@@ -25,10 +25,12 @@ export async function POST(request: NextRequest) {
     const connectionUri = uri;
     let testConn: mongoose.Connection | null = null;
     try {
-      testConn = await mongoose.createConnection(connectionUri, {
-        dbName: 'Restaurant',
-        serverSelectionTimeoutMS: 5000,
-      }).asPromise();
+      testConn = await mongoose
+        .createConnection(connectionUri, {
+          dbName: 'Restaurant',
+          serverSelectionTimeoutMS: 5000,
+        })
+        .asPromise();
 
       // Probar una operación simple
       const collections = await testConn.db?.listCollections().toArray();
@@ -43,8 +45,11 @@ export async function POST(request: NextRequest) {
         } else {
           UserModel = testConn.model('User', userSchema) as mongoose.Model<any>;
         }
-  const admin = await UserModel.findOne({ roles: 'admin', isActive: true }).exec();
-  adminExists = !!admin;
+        const admin = await UserModel.findOne({
+          roles: 'admin',
+          isActive: true,
+        }).exec();
+        adminExists = !!admin;
       } catch {
         adminExists = false;
       }
@@ -55,11 +60,14 @@ export async function POST(request: NextRequest) {
         success: true,
         message: 'Conexión a MongoDB establecida correctamente',
         collections: Array.isArray(collections) ? collections.length : 0,
-        adminExists
+        adminExists,
       });
     } catch (connectionError: unknown) {
       if (testConn) await testConn.close();
-      const errorMessage = connectionError instanceof Error ? connectionError.message : 'Error de conexión desconocido';
+      const errorMessage =
+        connectionError instanceof Error
+          ? connectionError.message
+          : 'Error de conexión desconocido';
       return NextResponse.json(
         { error: `Error de conexión: ${errorMessage}` },
         { status: 500 }
@@ -67,10 +75,8 @@ export async function POST(request: NextRequest) {
     }
   } catch (error: unknown) {
     console.error('Error testing MongoDB connection:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Error al conectar con MongoDB';
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: 500 }
-    );
+    const errorMessage =
+      error instanceof Error ? error.message : 'Error al conectar con MongoDB';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
-} 
+}

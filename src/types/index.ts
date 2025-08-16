@@ -1,39 +1,7 @@
-// Tipos de usuario
-export interface User {
-  _id: string;
-  name: string;
-  email: string;
-  roles: string[];
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface UserLogin {
-  email: string;
-  password: string;
-}
-
-export interface UserRegister extends UserLogin {
-  name: string;
-  roles?: string[];
-}
-
-// Tipos de respuesta de API
-export interface ApiResponse<T = unknown> {
-  success: boolean;
-  message: string;
-  data?: T;
-  error?: string;
-}
-
-// Tipos de autenticación
-export interface AuthContextType {
-  user: User | null;
-  login: (credentials: UserLogin) => Promise<void>;
-  logout: () => void;
-  isLoading: boolean;
-}
+// Export all types from organized modules
+export * from './user';
+export * from './auth';
+export * from './api';
 
 // Tipos de menú y productos
 export interface MenuItem {
@@ -74,4 +42,4 @@ export interface DashboardStats {
   averageOrderValue: number;
   popularItems: MenuItem[];
   recentOrders: Order[];
-} 
+}

@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 
 export interface IUser extends Document {
   name: string;
+  username: string;
   email: string;
   password: string;
   roles: string[];
@@ -29,6 +30,22 @@ const userSchema = new Schema<IUser>(
       trim: true,
       maxlength: [50, 'El nombre no puede tener más de 50 caracteres'],
     },
+    username: {
+      type: String,
+      required: false, // Opcional para compatibilidad con usuarios existentes
+      unique: false, // No único para permitir múltiples usuarios sin username
+      lowercase: true,
+      trim: true,
+      minlength: [3, 'El nombre de usuario debe tener al menos 3 caracteres'],
+      maxlength: [
+        30,
+        'El nombre de usuario no puede tener más de 30 caracteres',
+      ],
+      match: [
+        /^[a-zA-Z0-9_-]+$/,
+        'El nombre de usuario solo puede contener letras, números, guiones y guiones bajos',
+      ],
+    },
     email: {
       type: String,
       required: [true, 'El email es requerido'],
@@ -47,7 +64,16 @@ const userSchema = new Schema<IUser>(
     },
     roles: {
       type: [String],
-      enum: ['admin', 'manager', 'staff', 'box', 'kitchen', 'administration', 'Waiter'],
+      enum: [
+        'admin',
+        'director',
+        'manager',
+        'staff',
+        'box',
+        'kitchen',
+        'administration',
+        'Waiter',
+      ],
       required: true,
     },
     isActive: {
@@ -104,12 +130,16 @@ userSchema.pre('save', async function (next) {
 });
 
 // Método para comparar contraseñas
-userSchema.methods.comparePassword = async function (candidatePassword: string): Promise<boolean> {
+userSchema.methods.comparePassword = async function (
+  candidatePassword: string
+): Promise<boolean> {
   return bcrypt.compare(candidatePassword, this.password);
 };
 
 // Método para comparar token de verificación
-userSchema.methods.compareVerificationToken = async function (candidateToken: string): Promise<boolean> {
+userSchema.methods.compareVerificationToken = async function (
+  candidateToken: string
+): Promise<boolean> {
   try {
     if (!this.verificationToken) return false;
     return await bcrypt.compare(candidateToken, this.verificationToken);
@@ -120,7 +150,9 @@ userSchema.methods.compareVerificationToken = async function (candidateToken: st
 };
 
 // Método para comparar token de reset de contraseña
-userSchema.methods.compareResetPasswordToken = async function (candidateToken: string): Promise<boolean> {
+userSchema.methods.compareResetPasswordToken = async function (
+  candidateToken: string
+): Promise<boolean> {
   try {
     if (!this.resetPasswordToken) return false;
     return await bcrypt.compare(candidateToken, this.resetPasswordToken);
@@ -138,11 +170,14 @@ userSchema.methods.toJSON = function () {
 };
 
 // Asegurar que el modelo se registre correctamente
-const UserModel = mongoose.models.User || mongoose.model<IUser>('User', userSchema);
+const UserModel =
+  mongoose.models.User || mongoose.model<IUser>('User', userSchema);
 
 // Verificar que los métodos estén disponibles
 if (!UserModel.prototype.compareVerificationToken) {
-  UserModel.prototype.compareVerificationToken = async function (candidateToken: string): Promise<boolean> {
+  UserModel.prototype.compareVerificationToken = async function (
+    candidateToken: string
+  ): Promise<boolean> {
     try {
       if (!this.verificationToken) return false;
       return await bcrypt.compare(candidateToken, this.verificationToken);

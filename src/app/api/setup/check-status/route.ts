@@ -35,36 +35,40 @@ export async function GET() {
       return NextResponse.json({ isConfigured: false, needsSetup: true });
     }
 
-      // Verificar conexión a MongoDB usando dbConnect
-      try {
-  const dbConnect = (await import('@/lib/mongodb')).default;
-  const connectionUri = mongoUri;
-  await dbConnect(connectionUri);
+    // Verificar conexión a MongoDB usando dbConnect
+    try {
+      const dbConnect = (await import('@/lib/mongodb')).default;
+      const connectionUri = mongoUri;
+      await dbConnect(connectionUri);
 
-        if (mongoose.connection.readyState !== 1) {
-          throw new Error('Conexión no establecida');
-        }
+      if (mongoose.connection.readyState !== 1) {
+        throw new Error('Conexión no establecida');
+      }
 
-        const User = (await import('@/models/User')).default;
-  // Buscar admin activo y con email verificado (roles: 'admin')
-  const adminCount = await User.countDocuments({ roles: 'admin', isActive: true, emailVerified: true });
-  console.log('[check-status] Admins encontrados:', adminCount);
+      const User = (await import('@/models/User')).default;
+      // Buscar admin activo y con email verificado (roles: 'admin')
+      const adminCount = await User.countDocuments({
+        roles: 'admin',
+        isActive: true,
+        emailVerified: true,
+      });
+      console.log('[check-status] Admins encontrados:', adminCount);
 
-        // No cerrar la conexión manualmente, dejar que el singleton la maneje
+      // No cerrar la conexión manualmente, dejar que el singleton la maneje
 
-        if (adminCount === 0) {
-          console.log('[check-status] No se encontró admin activo y verificado');
-          return NextResponse.json({ isConfigured: false, needsSetup: true });
-        }
-
-        console.log('[check-status] Sistema configurado correctamente');
-        return NextResponse.json({ isConfigured: true, needsSetup: false });
-      } catch (error: unknown) {
-        console.error('Error checking MongoDB connection:', error);
+      if (adminCount === 0) {
+        console.log('[check-status] No se encontró admin activo y verificado');
         return NextResponse.json({ isConfigured: false, needsSetup: true });
       }
+
+      console.log('[check-status] Sistema configurado correctamente');
+      return NextResponse.json({ isConfigured: true, needsSetup: false });
+    } catch (error: unknown) {
+      console.error('Error checking MongoDB connection:', error);
+      return NextResponse.json({ isConfigured: false, needsSetup: true });
+    }
   } catch (error: unknown) {
     console.error('Error checking setup status:', error);
     return NextResponse.json({ isConfigured: false, needsSetup: true });
   }
-} 
+}

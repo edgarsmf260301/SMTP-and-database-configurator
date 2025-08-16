@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import SetupWizard from '@/components/SetupWizard';
-import LoginPage from '@/components/LoginPage';
-import LoadingPage from '@/components/LoadingPage';
-import SystemCheckPage from '@/components/SystemCheckPage';
+import SetupWizard from '@/components/users/SetupWizard';
+import LoginPage from '@/components/auth/LoginPage';
+import LoadingPage from '@/components/ui/LoadingPage';
+import SystemCheckPage from '@/components/users/SystemCheckPage';
 
 export default function HomePage() {
   const [isChecking, setIsChecking] = useState(true);
@@ -17,7 +17,7 @@ export default function HomePage() {
       try {
         // Simular un pequeño delay para mostrar la verificación
         await new Promise(resolve => setTimeout(resolve, 1500));
-        
+
         const response = await fetch('/api/setup/check-status', {
           method: 'GET',
           headers: {

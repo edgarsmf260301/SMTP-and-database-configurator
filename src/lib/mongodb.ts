@@ -1,10 +1,12 @@
-
 import mongoose from 'mongoose';
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/Restaurant';
 
-if (!MONGODB_URI) {
-  throw new Error('Please define the MONGODB_URI environment variable inside .env.local');
+const DEFAULT_MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/Restaurant';
+
+if (!DEFAULT_MONGODB_URI) {
+  throw new Error(
+    'Please define the MONGODB_URI environment variable inside .env.local'
+  );
 }
 
 /**
@@ -12,20 +14,29 @@ if (!MONGODB_URI) {
  * in development. This prevents connections growing exponentially
  * during API Route usage.
  */
-// @ts-ignore
+// @ts-expect-error - Global mongoose cache
 let cached = global.mongoose;
-// @ts-ignore
 if (!cached) {
-  // @ts-ignore
-  cached = global.mongoose = { conn: null, promise: null, uri: null };
+  // @ts-expect-error - Set global cache
+  cached = global.mongoose = { conn: null, promise: null };
 }
 
 
+export async function connectToDatabase(uri?: string) {
+  return dbConnect(uri);
+}
+
+/**
+ * Conecta a MongoDB usando la URI proporcionada o la predeterminada.
+ * @param uri URI de conexión personalizada (opcional)
+ */
 export async function dbConnect(uri?: string) {
-  // Siempre usar la URI principal del entorno
-  const connectionUri = MONGODB_URI;
-  const CONNECTED = mongoose.ConnectionStates ? mongoose.ConnectionStates.connected : 1;
-  // Si ya tenemos una conexión activa, devolverla
+  const connectionUri = uri || DEFAULT_MONGODB_URI;
+  const CONNECTED = mongoose.ConnectionStates
+    ? mongoose.ConnectionStates.connected
+    : 1;
+
+  // Si ya tenemos una conexión activa y es la misma URI, devolverla
   if (cached.conn && mongoose.connection.readyState === CONNECTED) {
     return cached.conn;
   }
@@ -66,7 +77,6 @@ export async function dbConnect(uri?: string) {
     dbName: 'Restaurant',
   };
 
-  cached.uri = connectionUri;
   cached.promise = mongoose.connect(connectionUri, opts);
 
   try {

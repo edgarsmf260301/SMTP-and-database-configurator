@@ -1,165 +1,224 @@
-# 🍽️ Restaurant Viticos System
+# Sistema de Restaurante - Viticos
 
-Sistema de gestión completo para restaurantes desarrollado con Next.js, TypeScript, MongoDB y Tailwind CSS.
+Un sistema completo de gestión de restaurante construido con Next.js 14, TypeScript, Tailwind CSS y MongoDB.
 
-## ✨ Características
+## 🚀 Características
 
-- 🎨 **Interfaz moderna y atractiva** con diseño UX/UI optimizado
-- 🔐 **Sistema de autenticación seguro** con JWT
-- 📊 **Dashboard administrativo** completo
-- 🗄️ **Base de datos MongoDB** con Mongoose
-- 📧 **Sistema de emails** con SMTP de Gmail
-- ⚡ **Configuración automática** paso a paso
-- 📱 **Diseño responsive** para todos los dispositivos
-- 🎯 **Validación de formularios** con Zod
-- 🔧 **Configuración de ESLint y Prettier**
-
-## 🚀 Configuración Inicial
-
-### Requisitos Previos
-
-1. **Node.js** (versión 18 o superior)
-2. **MongoDB Atlas** o MongoDB local
-3. **Cuenta de Gmail** para SMTP
-
-### Instalación
-
-1. **Clonar el repositorio:**
-   ```bash
-   git clone <repository-url>
-   cd restaurant-system
-   ```
-
-2. **Instalar dependencias:**
-   ```bash
-   npm install
-   ```
-
-3. **Ejecutar el servidor de desarrollo:**
-   ```bash
-   npm run dev
-   ```
-
-4. **Abrir en el navegador:**
-   ```
-   http://localhost:3000
-   ```
-
-## 🔧 Configuración del Sistema
-
-El sistema incluye un **asistente de configuración automático** que te guiará paso a paso:
-
-### Paso 1: Bienvenida
-- Información general del sistema
-- Requisitos previos
-
-### Paso 2: Configuración de MongoDB
-- Ingresa tu URI de conexión de MongoDB
-- **Guía de configuración de IP:**
-  - Para permitir todas las conexiones: `0.0.0.0/0`
-  - Para mayor seguridad: IP específica de tu proveedor
-
-### Paso 3: Configuración de Email SMTP
-- **Configuración de Gmail:**
-  1. Ve a tu cuenta de Google
-  2. Activa la verificación en dos pasos
-  3. Genera una contraseña de aplicación
-  4. Usa esa contraseña en el sistema
-
-### Paso 4: Usuario Administrador
-- Crea tu cuenta de administrador principal
-- Se creará automáticamente la base de datos `Restaurant_System`
-- Se creará la colección `Users`
-
-### Paso 5: Completado
-- ¡Listo para usar el sistema!
+- **Gestión de Usuarios**: Sistema completo de usuarios con roles y permisos
+- **Autenticación Segura**: Login, logout, verificación de correo, recuperación de contraseña
+- **Panel de Administración**: Dashboard intuitivo para gestión del sistema
+- **Verificación de Correo**: Sistema robusto de verificación para administradores
+- **Gestión de Sesiones**: Control avanzado de sesiones con detección de cierre de navegador
+- **Setup Automático**: Configuración inicial automatizada del sistema
 
 ## 📁 Estructura del Proyecto
 
 ```
-restaurant-system/
-├── src/
-│   ├── app/
-│   │   ├── api/           # APIs del sistema
-│   │   ├── dashboard/     # Dashboard principal
-│   │   └── page.tsx       # Página de login
-│   ├── components/        # Componentes React
-│   ├── lib/              # Utilidades y configuraciones
-│   ├── models/           # Modelos de MongoDB
-│   └── types/            # Tipos TypeScript
-├── public/               # Archivos estáticos
-└── env.example          # Variables de entorno de ejemplo
+src/
+├── app/                    # App Router de Next.js 14
+│   ├── api/               # Endpoints de API
+│   │   ├── auth/          # Autenticación
+│   │   ├── users/         # Gestión de usuarios
+│   │   ├── setup/         # Configuración inicial
+│   │   └── admin/         # Funciones administrativas
+│   ├── dashboard/         # Páginas del panel
+│   ├── login/             # Página de login
+│   └── globals.css        # Estilos globales
+├── components/            # Componentes React organizados
+│   ├── ui/               # Componentes de interfaz básicos
+│   │   ├── InputField.tsx
+│   │   ├── ErrorMessage.tsx
+│   │   ├── ModalHeader.tsx
+│   │   ├── LoadingPage.tsx
+│   │   └── index.ts
+│   ├── auth/             # Componentes de autenticación
+│   │   ├── LoginPage.tsx
+│   │   ├── ProtectedRoute.tsx
+│   │   └── index.ts
+│   ├── layout/           # Componentes de layout
+│   │   ├── PanelLayout.tsx
+│   │   ├── PanelSidebar.tsx
+│   │   └── index.ts
+│   ├── forms/            # Componentes de formularios
+│   │   ├── RolesDropdown.tsx
+│   │   ├── AdminVerification.tsx
+│   │   └── index.ts
+│   ├── users/            # Componentes específicos de usuarios
+│   │   ├── UserTable.tsx
+│   │   ├── EditUserModal.tsx
+│   │   └── UserRegisterModal.tsx
+│   └── index.ts          # Exportaciones centralizadas
+├── hooks/                # Custom hooks
+│   ├── useAuth.ts
+│   ├── useUserActivity.ts
+│   └── useServerInit.ts
+├── lib/                  # Utilidades y configuraciones
+│   ├── constants.ts      # Constantes del sistema
+│   ├── utils.ts          # Funciones utilitarias
+│   ├── mongodb.ts        # Configuración de base de datos
+│   └── token-utils.ts    # Utilidades de tokens
+├── models/               # Modelos de MongoDB
+│   └── User.ts
+├── types/                # Tipos TypeScript
+│   ├── user.ts
+│   ├── auth.ts
+│   ├── api.ts
+│   └── index.ts
+└── middleware.ts         # Middleware de Next.js
 ```
 
 ## 🛠️ Tecnologías Utilizadas
 
-- **Frontend:** Next.js 15, React 19, TypeScript
-- **Estilos:** Tailwind CSS 4
-- **Base de Datos:** MongoDB con Mongoose
-- **Autenticación:** JWT
-- **Validación:** Zod
-- **Formularios:** React Hook Form
-- **Email:** Nodemailer con SMTP
-- **Linting:** ESLint
-- **Formateo:** Prettier
+- **Frontend**: Next.js 14, React 18, TypeScript
+- **Styling**: Tailwind CSS, Framer Motion
+- **Backend**: Next.js API Routes
+- **Base de Datos**: MongoDB con Mongoose
+- **Autenticación**: JWT, bcryptjs
+- **Email**: Nodemailer con Gmail SMTP
+- **Validación**: Zod, React Hook Form
+- **Linting**: ESLint, Prettier
 
-## 🔒 Variables de Entorno
+## 🚀 Instalación y Configuración
 
-Copia el archivo `env.example` a `.env.local` y configura las variables:
+### 1. Clonar el repositorio
+```bash
+git clone <repository-url>
+cd restaurant-system
+```
 
+### 2. Instalar dependencias
+```bash
+npm install
+```
+
+### 3. Configurar variables de entorno
+```bash
+cp env.example .env.local
+```
+
+Editar `.env.local` con tus configuraciones:
 ```env
-# MongoDB
-MONGODB_URI=mongodb+srv://usuario:contraseña@cluster.mongodb.net/restaurant-system
-
-# SMTP Gmail
+MONGODB_URI=mongodb://localhost:27017/restaurant
 SMTP_EMAIL=tu-email@gmail.com
 SMTP_PASSWORD=tu-contraseña-de-aplicación
-
-# Aplicación
-NEXTAUTH_SECRET=clave-secreta-generada
-NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=tu-secret-key
 ```
 
-## 📝 Scripts Disponibles
+### 4. Ejecutar el proyecto
+```bash
+npm run dev
+```
+
+### 5. Configuración inicial
+Accede a `http://localhost:3000` y sigue el wizard de configuración inicial.
+
+## 📋 Funcionalidades Principales
+
+### Gestión de Usuarios
+- ✅ Crear, editar y eliminar usuarios
+- ✅ Asignar roles y permisos
+- ✅ Verificación de correo obligatoria para administradores
+- ✅ Control de estado activo/inactivo
+- ✅ Protección contra auto-edición
+
+### Autenticación y Seguridad
+- ✅ Login seguro con JWT
+- ✅ Logout automático al cerrar navegador
+- ✅ Recuperación de contraseña
+- ✅ Verificación de correo electrónico
+- ✅ Control de sesiones múltiples
+
+### Panel de Administración
+- ✅ Dashboard con estadísticas
+- ✅ Gestión completa de usuarios
+- ✅ Configuración del sistema
+- ✅ Logs de actividad
+
+## 🔧 Scripts Disponibles
 
 ```bash
-npm run dev          # Servidor de desarrollo
-npm run build        # Construir para producción
+npm run dev          # Desarrollo
+npm run build        # Construcción para producción
 npm run start        # Servidor de producción
-npm run lint         # Ejecutar ESLint
+npm run lint         # Verificar código con ESLint
+npm run format       # Formatear código con Prettier
 ```
 
-## 🎨 Diseño y UX
+## 📝 Convenciones de Código
 
-- **Paleta de colores:** Naranja, rojo y amarillo (temática restaurante)
-- **Gradientes modernos** para elementos visuales
-- **Animaciones suaves** para mejor experiencia
-- **Iconos SVG** integrados
-- **Diseño responsive** para móviles y desktop
+### Estructura de Componentes
+- **UI Components**: Componentes reutilizables básicos
+- **Auth Components**: Componentes relacionados con autenticación
+- **Layout Components**: Componentes de estructura y navegación
+- **Form Components**: Componentes de formularios especializados
+- **User Components**: Componentes específicos de gestión de usuarios
 
-## 🔧 Configuración de Desarrollo
+### Nomenclatura
+- **Archivos**: PascalCase para componentes, camelCase para utilidades
+- **Componentes**: PascalCase
+- **Funciones**: camelCase
+- **Constantes**: UPPER_SNAKE_CASE
+- **Tipos**: PascalCase
 
-### ESLint
-El proyecto incluye configuración de ESLint para mantener la calidad del código.
+### Importaciones
+```typescript
+// Importaciones organizadas
+import React from 'react';
+import { motion } from 'framer-motion';
 
-### Prettier
-Configurado para formateo automático del código.
+// Componentes locales
+import { InputField, ErrorMessage } from '@/components/ui';
+import { ProtectedRoute } from '@/components/auth';
+import { PanelLayout } from '@/components/layout';
 
-### TypeScript
-Configuración estricta para mejor desarrollo.
+// Hooks y utilidades
+import { useAuth } from '@/hooks/useAuth';
+import { API_ENDPOINTS } from '@/lib/constants';
 
-## 📞 Soporte
+// Tipos
+import type { User, AuthUser } from '@/types';
+```
 
-Si necesitas ayuda con la configuración o tienes preguntas:
+## 🔒 Seguridad
 
-1. Revisa la documentación en `/src/docs/`
-2. Verifica los logs del servidor
-3. Contacta al equipo de desarrollo
+- **Autenticación JWT**: Tokens seguros con expiración
+- **Verificación de Correo**: Obligatoria para roles administrativos
+- **Control de Sesiones**: Detección de cierre de navegador
+- **Validación de Datos**: Zod para validación robusta
+- **Protección de Rutas**: Middleware de autenticación
+- **Rate Limiting**: Protección contra ataques de fuerza bruta
+
+## 🚀 Despliegue
+
+### Vercel (Recomendado)
+1. Conectar repositorio a Vercel
+2. Configurar variables de entorno
+3. Desplegar automáticamente
+
+### Otros Proveedores
+- **Netlify**: Compatible con Next.js
+- **Railway**: Soporte nativo para Node.js
+- **DigitalOcean**: App Platform
+
+## 🤝 Contribución
+
+1. Fork el proyecto
+2. Crear una rama para tu feature (`git checkout -b feature/AmazingFeature`)
+3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
+4. Push a la rama (`git push origin feature/AmazingFeature`)
+5. Abrir un Pull Request
 
 ## 📄 Licencia
 
-Este proyecto es propiedad de Restaurant Viticos. Todos los derechos reservados.
+Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
+
+## 🆘 Soporte
+
+Para soporte técnico o preguntas:
+- Crear un issue en GitHub
+- Contactar al equipo de desarrollo
+- Revisar la documentación en `/docs`
 
 ---
 
-**¡Disfruta gestionando tu restaurante con nuestro sistema! 🍕🍔🍜**
+**Desarrollado con ❤️ para Viticos Restaurant System**

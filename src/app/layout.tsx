@@ -1,22 +1,24 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
-import ClientOnly from "@/components/ClientOnly";
+import type { Metadata } from 'next';
+import { Geist, Geist_Mono } from 'next/font/google';
+import './globals.css';
+import ClientOnly from '@/components/ui/ClientOnly';
+import ServerInitWrapper from '@/components/users/ServerInitWrapper';
+import BrowserCloseHandler from '@/components/users/BrowserCloseHandler';
 
 const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+  variable: '--font-geist-sans',
+  subsets: ['latin'],
 });
 
 const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  variable: '--font-geist-mono',
+  subsets: ['latin'],
 });
 
 export const metadata: Metadata = {
-  title: "Sistema de restaurante",
-  description: "Sistema de gestión completo para restaurantes",
-  robots: "noindex, nofollow",
+  title: 'Sistema de restaurante',
+  description: 'Sistema de gestión completo para restaurantes',
+  robots: 'noindex, nofollow',
 };
 
 export const viewport = {
@@ -36,7 +38,8 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <ClientOnly>
-          {children}
+          <BrowserCloseHandler />
+          <ServerInitWrapper>{children}</ServerInitWrapper>
         </ClientOnly>
       </body>
     </html>
